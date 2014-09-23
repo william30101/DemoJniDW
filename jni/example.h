@@ -31,3 +31,5 @@ class Square : public Shape {
 		virtual double area(void);
 		virtual double perimeter(void);
 };
+
+

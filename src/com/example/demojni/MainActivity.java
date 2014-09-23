@@ -78,7 +78,10 @@ public class MainActivity extends Activity {
 	    			
 	    			sdcard = Environment.getExternalStorageDirectory();
 
-	    			file = new File(sdcard,"testdata.txt");
+	    			String dirc = sdcard.getParent();
+	    			dirc = dirc + "/legacy";
+	    			
+	    			file = new File(dirc,"testdata.txt");
 	    			Log.i(TAG," External storage path =" + sdcard);
 
 	    			try {

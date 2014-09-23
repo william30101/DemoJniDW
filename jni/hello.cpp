@@ -29,7 +29,6 @@ static const char *classPathName = "com/example/demojni/MainActivity";
 #define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
 #define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, fmt, ##args)
 
-#define M_PI 3.14159265358979323846
 
 using namespace android;
 
@@ -42,7 +41,8 @@ extern "C"
 		//int *str = (char*)env->GetStringUTFChars(data, NULL);
 
 		Circle* cir = new Circle(5);
-		LOGI("radius = %lf",cir->radius);
+		cir->area();
+		LOGI("radius = %lf area=%lf",cir->radius,cir->area());
 		//cir.
 
 
@@ -61,7 +61,7 @@ extern "C"
 
 
 		Circle* cir = new Circle(10);
-		LOGI("radius = %lf",cir->radius);
+		LOGI("radius = %lf ",cir->radius);
 		//cir.
 
 		  env->ReleaseIntArrayElements(data, body, 0);
@@ -209,26 +209,5 @@ extern "C"
 	}
 }
 
-	/* Move the shape to a new location */
-	void Shape::move(double dx, double dy) {
-		x += dx;
-		y += dy;
-	}
 
-	int Shape::nshapes = 0;
 
-	double Circle::area(void) {
-		return M_PI*radius*radius;
-	}
-
-	double Circle::perimeter(void) {
-		return 2*M_PI*radius;
-	}
-
-	double Square::area(void) {
-		return width*width;
-	}
-
-	double Square::perimeter(void) {
-		return 4*width;
-	}
