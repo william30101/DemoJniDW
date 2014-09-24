@@ -16,16 +16,20 @@ import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 public class MainActivity extends Activity {
 
 	private static String TAG = "App";
 	EditText DataText;
-	Button WriteBtn,WriteFileBtn,StartCalBtn;
+	TextView StatusText;
+	Button WriteBtn,WriteFileBtn,StartCalBtn,UartBtn,Readbtn;
 	private int[] wnum;
 	File sdcard,file;
 	private int alllen=0;
 	private String btnname;
+	public int Uart_Port = -1, Baud_rate = -1;
+	public static int fd;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -36,13 +40,17 @@ public class MainActivity extends Activity {
 		WriteBtn = (Button) findViewById(R.id.btn1);
 		WriteFileBtn = (Button) findViewById(R.id.btn2);
 		StartCalBtn = (Button) findViewById(R.id.btn3);
+		UartBtn = (Button) findViewById(R.id.uartbtn);
+		Readbtn = (Button) findViewById(R.id.readbtn);
 		
 		WriteBtn.setOnClickListener(ClickListener);
 		WriteFileBtn.setOnClickListener(ClickListener);
 		StartCalBtn.setOnClickListener(ClickListener);
+		UartBtn.setOnClickListener(ClickListener);
+		Readbtn.setOnClickListener(ClickListener);
 		
 		DataText = (EditText)findViewById(R.id.edText1);
-		
+		StatusText = (TextView) findViewById(R.id.statustext);
 		
 		
 		wnum = new int[500];
@@ -76,6 +84,27 @@ public class MainActivity extends Activity {
 	    			Runnable r3 = new MyThread(v);
                    	new Thread(r3).start();
 	    				
+	    			break;
+	    			
+	    		case R.id.uartbtn : 
+	    			// Open Uart here
+	    			fd = MainActivity.OpenUart("ttymxc2");
+
+	    			if (fd > 0 )
+	    			{
+	    				// Setting uart
+	    				
+	    				StatusText.setText("Connected");
+	    				Baud_rate = 1; // 115200
+	    				MainActivity.SetUart(Baud_rate);
+	    				
+	    			}
+	    			break;
+	    		case R.id.readbtn : 
+	    			if (fd > 0 )
+	    			{
+	    				MainActivity.ReceiveMsgUart();
+	    			}
 	    			break;
 	    		default:
 	    			Log.i(TAG,"Invaild Button function");
@@ -183,6 +212,7 @@ public class MainActivity extends Activity {
 		return super.onOptionsItemSelected(item);
 	}
 	
+
 	
 	static
 	{
@@ -202,6 +232,6 @@ public class MainActivity extends Activity {
 	public static native void CloseUart(int i);
 	public static native int SetUart(int i);
 	public static native int SendMsgUart(String msg);
-	public static native String ReceiveMsgUart();
+	public static native int ReceiveMsgUart();
 	public static native int StartCal();
 }

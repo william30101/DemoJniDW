@@ -130,7 +130,7 @@ extern "C"
 		env->ReleaseStringUTFChars(str, buf);
 	}
 
-	JNIEXPORT jstring JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc)
+	JNIEXPORT jint JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc)
 	{
 		char buffer[255];
 		char buf[255];
@@ -138,18 +138,24 @@ extern "C"
 		memset(buffer, 0, sizeof(buffer));
 		memset(buf, 0, sizeof(buf));
 		len = read(fd, buffer, 255);
+
+
+		LOGI("read on navite function ");
 		if (len > 0)
 		{
 			buf[len]='\0';
-			return env->NewStringUTF(buffer);
-		} else
-			return NULL;
+
+			LOGI("read buffer = %s ",buffer);
+
+			//return env->NewStringUTF(buffer);
+		}
+			//return NULL;
 	}
 
 
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
-		{"ReceiveMsgUart",   "()Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
+		{"ReceiveMsgUart",   "()I",(void *)Native_ReceiveMsgUart},
 		{"SendMsgUart",   "(Ljava/lang/String;)I",  (void *)Native_SendMsgUart},
 		{"SetUart",   "(I)I",   					(void *)Native_SetUart},
 		{"OpenUart",   "(Ljava/lang/String;)I",   	(void *)Native_OpenUart},

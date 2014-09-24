@@ -43,4 +43,28 @@
         android:layout_centerHorizontal="true"
         android:text="Start Cal" />
 
+    <Button
+        android:id="@+id/readbtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn3"
+        android:layout_alignRight="@+id/edText1"
+        android:text="ReadUart" />
+
+    <Button
+        android:id="@+id/uartbtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn3"
+        android:layout_alignLeft="@+id/btn2"
+        android:text="Uart" />
+
+    <TextView
+        android:id="@+id/statustext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/readbtn"
+        android:layout_alignParentRight="true"
+        android:text="Disconnect" />
+
 </RelativeLayout>
