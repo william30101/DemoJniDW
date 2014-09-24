@@ -24,9 +24,8 @@ public class MainActivity extends Activity {
 	Button WriteBtn,WriteFileBtn,StartCalBtn;
 	private int[] wnum;
 	File sdcard,file;
-	private int flen = 0;
-	private int oflen = 0;
-	private static boolean first = true;
+	private int alllen=0;
+	private String btnname;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -60,60 +59,23 @@ public class MainActivity extends Activity {
 	    public void onClick(final View v) {
 	    	switch(v.getId()){
 	    		case R.id.btn1 : 
-	    			String[] da = DataText.getText().toString().trim().split("\\s+");
-	    			Arrays.fill(wnum, 0);
-	    			for (int i = 0 ; i < da.length ; i++ )
-	    			{
-	    				wnum[i] = Integer.parseInt(da[i]);
-	    			}
 	    			
-	    			WriteDemoData(wnum,da.length);
+                   	Runnable r = new MyThread(v);
+                   	new Thread(r).start();
+	    			
+	    			
 	    		break;
 	    		case R.id.btn2 : 
 	    			
-	    			boolean sdCardExist = Environment.getExternalStorageState()   
-                    .equals(android.os.Environment.MEDIA_MOUNTED);
-	    			
-	    			flen = 0;
-	    			
-	    			sdcard = Environment.getExternalStorageDirectory();
-
-	    			String dirc = sdcard.getParent();
-	    			dirc = dirc + "/legacy";
-	    			
-	    			file = new File(dirc,"testdata.txt");
-	    			Log.i(TAG," External storage path =" + sdcard);
-
-	    			try {
-	    			    BufferedReader br = new BufferedReader(new FileReader(file));
-	    			    String line;
-	    			    int i=0;
-	    			    Arrays.fill(wnum, 0);
-	    			    while ((line = br.readLine()) != null) {
-	    			    	
-	    			    	Log.i(TAG,"line = "+line);
-	    			    	String[] daf = line.split("\\s+");
-
-	    			    		for ( i = 0  ; i < daf.length ; i++ )
-		    	    			{
-		    	    				wnum[i+oflen] = Integer.parseInt(daf[i]);
-		    	    			}
-	    			    		
-	    			    	
-	    			    	oflen = daf.length;
-	    			    	
-	    			    }
-	    			    
-	    			    WriteDemoData(wnum,flen);
-	    			}
-	    			catch (IOException e) {
-	    			    //You'll need to add proper error handling here
-	    			}
+	    			Runnable r2 = new MyThread(v);
+                   	new Thread(r2).start();
 
 	    			
 	    			break;
 	    		case R.id.btn3 : 
-	    				StartCal();
+	    			Runnable r3 = new MyThread(v);
+                   	new Thread(r3).start();
+	    				
 	    			break;
 	    		default:
 	    			Log.i(TAG,"Invaild Button function");
@@ -121,6 +83,89 @@ public class MainActivity extends Activity {
 	    	}
 	    }
 	};
+	
+	
+	public class MyThread implements Runnable {
+
+		   private View view;
+		   String SendMsg;
+		   
+		   
+			public MyThread(View v) {
+			       // store parameter for later user
+				   this.view = v;
+			   }
+
+			public void run() {
+				
+					// uiHandler.sendEmptyMessage(0);
+
+					btnname = view.getResources().getResourceName(view.getId());
+					String sub = btnname.substring(btnname.indexOf("/") + 1);
+					
+					if (sub.equals("btn1"))
+					{
+						String[] da = DataText.getText().toString().trim().split("\\s+");
+						Arrays.fill(wnum, 0);
+						for (int i = 0 ; i < da.length ; i++ )
+						{
+							wnum[i] = Integer.parseInt(da[i]);
+						}
+	    			
+						WriteDemoData(wnum,da.length);
+					}
+					else if (sub.equals("btn2"))
+					{
+						boolean sdCardExist = Environment.getExternalStorageState()   
+			                    .equals(android.os.Environment.MEDIA_MOUNTED);
+				    			
+						
+						if (sdCardExist)
+						{
+				    			alllen = 0;
+				    			
+				    			sdcard = Environment.getExternalStorageDirectory();
+
+				    			String dirc = sdcard.getParent();
+				    			dirc = dirc + "/legacy";
+				    			
+				    			file = new File(dirc,"testdata.txt");
+				    			Log.i(TAG," External storage path =" + dirc);
+
+				    			try {
+				    			    BufferedReader br = new BufferedReader(new FileReader(file));
+				    			    String line;
+				    			    int i=0;
+				    			    Arrays.fill(wnum, 0);
+				    			    while ((line = br.readLine()) != null) {
+				    			    	
+				    			    	Log.i(TAG,"line = "+line);
+				    			    	String[] daf = line.split("\\s+");
+
+				    			    		for ( i = 0  ; i < daf.length ; i++ )
+					    	    			{
+					    	    				wnum[i+alllen] = Integer.parseInt(daf[i]);
+					    	    			}
+				    			    	alllen = alllen + daf.length;
+				    			    	
+				    			    }
+				    			    
+				    			    WriteDemoData(wnum,alllen);
+				    			}
+				    			catch (IOException e) {
+				    			    //You'll need to add proper error handling here
+				    			}
+						}
+					}
+					else if (sub.equals("btn3"))
+					{
+						StartCal();
+					}
+						
+					
+				
+			   }
+	 }
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
