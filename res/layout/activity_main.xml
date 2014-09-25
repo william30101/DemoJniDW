@@ -44,7 +44,7 @@
         android:text="Start Cal" />
 
     <Button
-        android:id="@+id/readbtn"
+        android:id="@+id/uartReadBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/btn3"
@@ -52,7 +52,7 @@
         android:text="ReadUart" />
 
     <Button
-        android:id="@+id/uartbtn"
+        android:id="@+id/uartBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/btn3"
@@ -60,11 +60,19 @@
         android:text="Uart" />
 
     <TextView
-        android:id="@+id/statustext"
+        android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_above="@+id/readbtn"
         android:layout_alignParentRight="true"
         android:text="Disconnect" />
+
+    <Button
+        android:id="@+id/uartWriteBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn1"
+        android:layout_alignRight="@+id/statustext"
+        android:text="WriteUart" />
 
 </RelativeLayout>

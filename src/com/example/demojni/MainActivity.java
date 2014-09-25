@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -20,16 +22,22 @@ import android.widget.TextView;
 
 public class MainActivity extends Activity {
 
+
+
+
 	private static String TAG = "App";
-	EditText DataText;
-	TextView StatusText;
-	Button WriteBtn,WriteFileBtn,StartCalBtn,UartBtn,Readbtn;
+	EditText dataText;
+	TextView statusText;
+	Button writeBtn,writeFileBtn,startCalBtn,uartBtn,uartReadBtn,uartWriteBtn;
 	private int[] wnum;
 	File sdcard,file;
 	private int alllen=0;
 	private String btnname;
 	public int Uart_Port = -1, Baud_rate = -1;
 	public static int fd;
+	final Timer timer = new Timer();
+	private boolean Uart_Check = false;
+	String ReStr;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -37,26 +45,51 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		
 		
-		WriteBtn = (Button) findViewById(R.id.btn1);
-		WriteFileBtn = (Button) findViewById(R.id.btn2);
-		StartCalBtn = (Button) findViewById(R.id.btn3);
-		UartBtn = (Button) findViewById(R.id.uartbtn);
-		Readbtn = (Button) findViewById(R.id.readbtn);
+		writeBtn = (Button) findViewById(R.id.btn1);
+		writeFileBtn = (Button) findViewById(R.id.btn2);
+		startCalBtn = (Button) findViewById(R.id.btn3);
+		uartBtn = (Button) findViewById(R.id.uartBtn);
+		uartReadBtn = (Button) findViewById(R.id.uartReadBtn);
+		uartWriteBtn = (Button) findViewById(R.id.uartWriteBtn);
 		
-		WriteBtn.setOnClickListener(ClickListener);
-		WriteFileBtn.setOnClickListener(ClickListener);
-		StartCalBtn.setOnClickListener(ClickListener);
-		UartBtn.setOnClickListener(ClickListener);
-		Readbtn.setOnClickListener(ClickListener);
 		
-		DataText = (EditText)findViewById(R.id.edText1);
-		StatusText = (TextView) findViewById(R.id.statustext);
+		writeBtn.setOnClickListener(ClickListener);
+		writeFileBtn.setOnClickListener(ClickListener);
+		startCalBtn.setOnClickListener(ClickListener);
+		uartBtn.setOnClickListener(ClickListener);
+		uartReadBtn.setOnClickListener(ClickListener);
+		uartWriteBtn.setOnClickListener(ClickListener);
+		
+		dataText = (EditText)findViewById(R.id.edText1);
+		statusText = (TextView) findViewById(R.id.statustext);
 		
 		
 		wnum = new int[500];
 		
 		Arrays.fill(wnum, 0);
 		
+		
+		TimerTask task = new TimerTask(){
+			public void run(){
+				runOnUiThread(new Runnable(){
+					@Override
+					public void run(){
+						if (Uart_Check) {
+							ReStr = ReceiveMsgUart();
+							if ( ReStr != null) {
+								Log.i(TAG,"Receive message = "+ ReStr);
+								//view.append(ReStr);
+								//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+								ReStr = null;
+							}
+						}
+					}
+					
+				});
+			}
+		};
+		
+		timer.schedule(task, 1000, 100);
 
 
 	}
@@ -86,15 +119,15 @@ public class MainActivity extends Activity {
 	    				
 	    			break;
 	    			
-	    		case R.id.uartbtn : 
+	    		case R.id.uartBtn : 
 	    			// Open Uart here
 	    			fd = MainActivity.OpenUart("ttymxc2");
 
 	    			if (fd > 0 )
 	    			{
 	    				// Setting uart
-	    				
-	    				StatusText.setText("Connected");
+	    				Uart_Check = true;
+	    				statusText.setText("Connected");
 	    				Baud_rate = 1; // 115200
 	    				MainActivity.SetUart(Baud_rate);
 	    				
@@ -104,6 +137,12 @@ public class MainActivity extends Activity {
 	    			if (fd > 0 )
 	    			{
 	    				MainActivity.ReceiveMsgUart();
+	    			}
+	    			break;
+	    		case R.id.uartWriteBtn : 
+	    			if (fd > 0 )
+	    			{
+	    				MainActivity.SendMsgUart(dataText.getText().toString());
 	    			}
 	    			break;
 	    		default:
@@ -134,7 +173,7 @@ public class MainActivity extends Activity {
 					
 					if (sub.equals("btn1"))
 					{
-						String[] da = DataText.getText().toString().trim().split("\\s+");
+						String[] da = dataText.getText().toString().trim().split("\\s+");
 						Arrays.fill(wnum, 0);
 						for (int i = 0 ; i < da.length ; i++ )
 						{
@@ -213,6 +252,14 @@ public class MainActivity extends Activity {
 	}
 	
 
+	@Override
+	protected void onDestroy() {
+		// TODO Auto-generated method stub
+		timer.cancel();
+		CloseUart(fd);
+		Uart_Check = false;
+		super.onDestroy();
+	}
 	
 	static
 	{
@@ -232,6 +279,6 @@ public class MainActivity extends Activity {
 	public static native void CloseUart(int i);
 	public static native int SetUart(int i);
 	public static native int SendMsgUart(String msg);
-	public static native int ReceiveMsgUart();
+	public static native String ReceiveMsgUart();
 	public static native int StartCal();
 }

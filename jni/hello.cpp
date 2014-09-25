@@ -155,7 +155,7 @@ extern "C"
 
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
-		{"ReceiveMsgUart",   "()I",(void *)Native_ReceiveMsgUart},
+		{"ReceiveMsgUart",   "()Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
 		{"SendMsgUart",   "(Ljava/lang/String;)I",  (void *)Native_SendMsgUart},
 		{"SetUart",   "(I)I",   					(void *)Native_SetUart},
 		{"OpenUart",   "(Ljava/lang/String;)I",   	(void *)Native_OpenUart},
