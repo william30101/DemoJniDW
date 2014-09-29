@@ -20,7 +20,8 @@
 #define	_TERMIOS_H_
 #endif
 
-static int fd;
+static int fd , nanoFd , driveFd;
+static int debugData = true;
 struct termios newtio, oldtio;
 
 static const char *classPathName = "com/example/demojni/MainActivity";
@@ -68,7 +69,7 @@ extern "C"
 		  return 0;
 	}
 
-	JNIEXPORT jint JNICALL Native_OpenUart(JNIEnv *env,jobject mc, jstring s)
+	JNIEXPORT jint JNICALL Native_OpenUart(JNIEnv *env,jobject mc, jstring s , jint fdnum)
 	{
 
 		const char *str1 = "/dev/";
@@ -78,28 +79,38 @@ extern "C"
 		strcpy(sall, str1);
 		strcat(sall, str2);
 
-		LOGI("open uart port device node = %s ",sall);
-		fd = open(sall, O_RDWR | O_NOCTTY | O_NDELAY);
+		LOGI("open uart port device node = %s , fdnum=%d \n",sall,fdnum);
+		if (fdnum == 1)
+		{
+			driveFd = open(sall, O_RDWR | O_NOCTTY | O_NDELAY);
+		}
+		else if (fdnum == 2)
+		{
+			nanoFd = open(sall, O_RDWR | O_NOCTTY | O_NDELAY);
+		}
 
 		env->ReleaseStringUTFChars(s, str2);
 
 		free(sall);
-		return fd;
+		return driveFd;
 	}
 
-	JNIEXPORT void JNICALL Java_idv_android_hellouart_Uart2C_closeUart(JNIEnv *env,jobject mc, jint i)
+	JNIEXPORT void JNICALL Native_CloseUart(JNIEnv *env,jobject mc, jint fdnum)
 	{
 
-		close(i);
+		close(fdnum);
 	}
 
-	JNIEXPORT jint JNICALL Native_SetUart(JNIEnv *env,jobject mc, jint i)
+	JNIEXPORT jint JNICALL Native_SetUart(JNIEnv *env,jobject mc, jint i,jint fdnum)
 	{
 		int Baud_rate[] = { B9600, B115200};
 		LOGI("Native_SetUart %d", i);
 
-		tcgetattr(fd, &oldtio);
-		tcgetattr(fd, &newtio);
+		if (fdnum == 1)
+		{
+
+		tcgetattr(driveFd, &oldtio);
+		tcgetattr(driveFd, &newtio);
 		cfsetispeed(&newtio, Baud_rate[i]);
 		cfsetospeed(&newtio, Baud_rate[i]);
 
@@ -112,55 +123,133 @@ extern "C"
 		newtio.c_cc[4] = 0;
 		newtio.c_cc[5] = 0;
 
-		if (tcsetattr(fd, TCSANOW, &newtio) < 0)
-		{
-			LOGE("tcsetattr2 fail !\n");
-			exit(1);
+			if (tcsetattr(driveFd, TCSANOW, &newtio) < 0)
+			{
+				LOGE("tcsetattr2 fail !\n");
+				exit(1);
+			}
+
+			return driveFd;
 		}
-		return fd;
+		else if (fdnum == 2)
+		{
+			tcgetattr(nanoFd, &oldtio);
+			tcgetattr(nanoFd, &newtio);
+			cfsetispeed(&newtio, Baud_rate[i]);
+			cfsetospeed(&newtio, Baud_rate[i]);
+
+			newtio.c_lflag = 0;
+			newtio.c_cflag = Baud_rate[i] | CS8 | CREAD | CLOCAL;
+			newtio.c_iflag = BRKINT | IGNPAR | IXON | IXOFF | IXANY;
+			newtio.c_oflag = 02;
+			newtio.c_line = 0;
+			newtio.c_cc[7] = 255;
+			newtio.c_cc[4] = 0;
+			newtio.c_cc[5] = 0;
+
+				if (tcsetattr(nanoFd, TCSANOW, &newtio) < 0)
+				{
+					LOGE("tcsetattr2 fail !\n");
+					exit(1);
+				}
+
+				return nanoFd;
+		}
+			return -1;
 	}
 
-	JNIEXPORT jint JNICALL Native_SendMsgUart(JNIEnv *env,jobject mc, jstring str)
+	JNIEXPORT jint JNICALL Native_SendMsgUart(JNIEnv *env,jobject mc, jstring str, jint fdnum)
 	{
 		int len;
 		const char *buf;
 		buf = env->GetStringUTFChars(str, NULL);
 		len = env->GetStringLength(str);
-		write(fd, buf, len);
+		if (fdnum == 1)
+		{
+			write(driveFd, buf, len);
+		}
+		else if (fdnum == 2)
+		{
+			write(nanoFd, buf, len);
+		}
 		env->ReleaseStringUTFChars(str, buf);
 	}
 
-	JNIEXPORT jint JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc)
+	JNIEXPORT jbyteArray JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc, jint fdnum)
 	{
 		char buffer[255];
 		char buf[255];
-		int len, i = 0, k = 0;
+		char buffertest[255] = {'a','b','c','d','\0'};
+		int len, i = 0, k = 0 , count = 0;
 		memset(buffer, 0, sizeof(buffer));
 		memset(buf, 0, sizeof(buf));
-		len = read(fd, buffer, 255);
+
+		if (fdnum == 1)
+			len = read(driveFd, buffer, 255);
+		else if (fdnum == 2)
+			len = read(nanoFd, buffer, 255);
+
+		for (i =0;i< 255 ; i++)
+		{
+			if (debugData)
+			{
+				if (buffertest[i] != '\0')
+					count++;
+			}
+			else
+			{
+				if (buffer[i] != '\0')
+				count++;
+			}
+		}
+
+		LOGI("read on native function leng = %d" ,count);
+		if(count <= 0)
+		{
+			return NULL;
+		}
+
+		jbyteArray arr = env->NewByteArray(count);
+		if (debugData)
+		{
+			env->SetByteArrayRegion(arr,0,count, (jbyte*)buffertest);
+		}
+		else
+			env->SetByteArrayRegion(arr,0,count, (jbyte*)buffer);
+
+		//env->ReleaseByteArrayElements(arr, 0 );
+
+		return arr;
+		/////////////////
 
 
-		LOGI("read on navite function ");
+/*
 		if (len > 0)
 		{
-			buf[len]='\0';
+			buffer[len]='\0';
 
 			LOGI("read buffer = %s ",buffer);
 
 			//return env->NewStringUTF(buffer);
+			return buffer;
 		}
-			//return NULL;
+		else
+			buffer[0] = '0';
+
+			return buffer;*/
 	}
 
 
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
-		{"ReceiveMsgUart",   "()Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
-		{"SendMsgUart",   "(Ljava/lang/String;)I",  (void *)Native_SendMsgUart},
-		{"SetUart",   "(I)I",   					(void *)Native_SetUart},
-		{"OpenUart",   "(Ljava/lang/String;)I",   	(void *)Native_OpenUart},
+		{"ReceiveMsgUart",   "(I)[B",(void *)Native_ReceiveMsgUart},
+		{"SendMsgUart",   "(Ljava/lang/String;I)I",  (void *)Native_SendMsgUart},
+		{"SetUart",   "(II)I",   					(void *)Native_SetUart},
+		{"OpenUart",   "(Ljava/lang/String;I)I",   	(void *)Native_OpenUart},
 		{"WriteDemoData",   "([II)I",   	(void *)Native_WriteDemoData},
 		{"StartCal",   "()I",   	(void *)Native_StartCal},
+		{"CloseUart",   "(I)V",   	(void *)Native_CloseUart},
+
 
 	};
 

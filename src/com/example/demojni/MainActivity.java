@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -11,6 +13,8 @@ import java.util.TimerTask;
 import android.app.Activity;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -27,17 +31,34 @@ public class MainActivity extends Activity {
 
 	private static String TAG = "App";
 	EditText dataText;
-	TextView statusText;
-	Button writeBtn,writeFileBtn,startCalBtn,uartBtn,uartReadBtn,uartWriteBtn;
+	TextView statusText,nanoText;
+	Button writeBtn,writeFileBtn,startCalBtn,uartBtn,uartReadBtn,uartWriteBtn,thrBtn;
 	private int[] wnum;
 	File sdcard,file;
 	private int alllen=0;
 	private String btnname;
 	public int Uart_Port = -1, Baud_rate = -1;
-	public static int fd;
+	public static int fd,nanoFd,encFd;
 	final Timer timer = new Timer();
-	private boolean Uart_Check = false;
-	String ReStr;
+	private boolean Uart_Check = false,nanoOpend = false, encoderOpend = false;
+	String ReStr,ReStrEnco,ReStrNano;
+
+	byte[] ReByteEnco = new byte[11];
+	byte[] ReByteNano = new byte[50];
+	boolean debugQueue = true;
+	private int nanoCount = 0 , encoderCount = 0;  
+	
+	// We could modify here , to chage how many data should we get from queue.
+	private int getNanoDataSize = 1 , getEncoderDataSize = 2 , beSentMessage = 13;
+	private ArrayList<byte[]> nanoQueue = new ArrayList<byte[]>();
+	private ArrayList<byte[]> encoderQueue = new ArrayList<byte[]>();
+	private Handler handler = new Handler();
+	private String testdata1 = "11 33 55 77 99 11";
+	private String testdata2 = "12 45 89 45 36 12";
+	
+	Runnable rnano = new NanoThread();
+	Runnable rencoder = new EncoderThread();
+	Runnable rcombind = new CombineThread();
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -51,7 +72,7 @@ public class MainActivity extends Activity {
 		uartBtn = (Button) findViewById(R.id.uartBtn);
 		uartReadBtn = (Button) findViewById(R.id.uartReadBtn);
 		uartWriteBtn = (Button) findViewById(R.id.uartWriteBtn);
-		
+		thrBtn = (Button) findViewById(R.id.thrbtn);
 		
 		writeBtn.setOnClickListener(ClickListener);
 		writeFileBtn.setOnClickListener(ClickListener);
@@ -59,16 +80,17 @@ public class MainActivity extends Activity {
 		uartBtn.setOnClickListener(ClickListener);
 		uartReadBtn.setOnClickListener(ClickListener);
 		uartWriteBtn.setOnClickListener(ClickListener);
+		thrBtn.setOnClickListener(ClickListener);
 		
 		dataText = (EditText)findViewById(R.id.edText1);
 		statusText = (TextView) findViewById(R.id.statustext);
-		
+		nanoText = (TextView) findViewById(R.id.nanoText);
 		
 		wnum = new int[500];
 		
 		Arrays.fill(wnum, 0);
 		
-		
+		/*
 		TimerTask task = new TimerTask(){
 			public void run(){
 				runOnUiThread(new Runnable(){
@@ -91,7 +113,9 @@ public class MainActivity extends Activity {
 		
 		timer.schedule(task, 1000, 100);
 
-
+*/
+		
+		
 	}
 
 	
@@ -121,7 +145,7 @@ public class MainActivity extends Activity {
 	    			
 	    		case R.id.uartBtn : 
 	    			// Open Uart here
-	    			fd = MainActivity.OpenUart("ttymxc2");
+	    			fd = MainActivity.OpenUart("ttymxc4",2);
 
 	    			if (fd > 0 )
 	    			{
@@ -129,21 +153,40 @@ public class MainActivity extends Activity {
 	    				Uart_Check = true;
 	    				statusText.setText("Connected");
 	    				Baud_rate = 1; // 115200
-	    				MainActivity.SetUart(Baud_rate);
+	    				MainActivity.SetUart(Baud_rate,2);
 	    				
 	    			}
 	    			break;
 	    		case R.id.readbtn : 
 	    			if (fd > 0 )
 	    			{
-	    				MainActivity.ReceiveMsgUart();
+	    				MainActivity.ReceiveMsgUart(2);
 	    			}
 	    			break;
 	    		case R.id.uartWriteBtn : 
 	    			if (fd > 0 )
 	    			{
-	    				MainActivity.SendMsgUart(dataText.getText().toString());
+	    				MainActivity.SendMsgUart(dataText.getText().toString(),2);
 	    			}
+	    			break;
+	    		case R.id.thrbtn : 
+	    				//Start nano thread
+	    				//Runnable rnano = new NanoThread();
+	    				
+	    				handler.postDelayed(rnano, 100);
+	    				
+	                   //	new Thread(rnano).start();
+	                   	//Start encoder thread
+	    				//Runnable rencoder = new EncoderThread();
+	                   	//new Thread(rencoder).start();
+	                   	handler.postDelayed(rencoder, 50);
+	                   	
+	                   	//Start Combine Thread
+	                   	//Runnable rcombind = new CombineThread();
+	                   	//new Thread(rcombind).start();
+	                   	handler.postDelayed(rcombind, 200);
+	                   	
+	                   	
 	    			break;
 	    		default:
 	    			Log.i(TAG,"Invaild Button function");
@@ -228,12 +271,275 @@ public class MainActivity extends Activity {
 					else if (sub.equals("btn3"))
 					{
 						StartCal();
-					}
-						
-					
+					}			
 				
 			   }
 	 }
+	
+	
+	
+
+	public class NanoThread implements Runnable {
+		   
+			public void run() {
+				
+				if (debugQueue)
+				{
+					Log.i(TAG,"NanoThread running count = " + nanoCount);
+					/*ReStr = testdata1;
+					//ReStr = "abcde";
+					
+					String[] daf = ReStr.split("\\s+");
+					byte[] nanoBy = new byte[daf.length];
+					for(int i=0;i<daf.length ; i++)
+						nanoBy[i] = Byte.parseByte(daf[i]);
+					*/
+					
+					byte[] nanoBy = ReceiveMsgUart(2);
+					
+					nanoQueue.add(nanoBy);
+					nanoCount++;
+					
+					
+					handler.postDelayed(rnano,100);
+					/*
+					try {
+						Thread.sleep(100l);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}*/
+				
+			    }
+				else
+				{
+					if(nanoOpend == false)
+					{
+						// Use UART1 for nanopan
+						nanoFd = MainActivity.OpenUart("ttymxc0",2);
+						if (nanoFd > 0 )
+		    			{
+		    				// Setting uart
+		    				nanoText.setText("Connected");
+		    				Baud_rate = 1; // 115200
+		    				MainActivity.SetUart(Baud_rate,2);
+		    				
+		    				nanoOpend = true;
+		    				
+		    			}
+					}
+					
+					
+					if (nanoOpend) {
+						ReByteNano = ReceiveMsgUart(2);
+						if ( ReByteNano != null) {
+							//Log.i(TAG,"Receive message = "+ ReStr);
+
+							//Add receive message from nanopan
+							nanoQueue.add(ReByteNano);
+							//view.append(ReStr);
+							//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+							//ReStr = null;
+							Arrays.fill(ReByteNano, (byte)0x00);
+							
+						}
+					}
+					
+					handler.postDelayed(rnano,100);
+				}
+				
+				
+			}
+	 }
+	
+	
+	public class EncoderThread implements Runnable {
+
+		   
+			public void run() {
+				
+				
+				if (debugQueue)
+				{
+					Log.i(TAG,"EncoderThread running count = " + encoderCount);
+					//ReStrEnco = "12345";
+					/*ReStrEnco = testdata2;
+					//ReStr = "abcde";
+					
+					String[] daf = ReStrEnco.split("\\s+");
+					byte[] encoBy = new byte[daf.length];
+					for(int i=0;i<daf.length ; i++)
+						encoBy[i] = Byte.parseByte(daf[i]);
+					
+					encoderQueue.add(encoBy);
+					encoderCount++;
+					handler.postDelayed(rencoder,50);
+					
+					*/
+					
+					byte[] encoderBy = ReceiveMsgUart(1);
+					
+					encoderQueue.add(encoderBy);
+					encoderCount++;
+					
+					
+					handler.postDelayed(rencoder,50);
+				
+			    }
+				else
+				{
+				
+					if(encoderOpend == false)
+					{
+						// Use UART1 for nanopan
+						encFd = MainActivity.OpenUart("ttymxc2",1);
+						if (encFd > 0 )
+		    			{
+		    				// Setting uart
+		    				nanoText.setText("Connected");
+		    				Baud_rate = 1; // 115200
+		    				MainActivity.SetUart(Baud_rate,1);
+		    				
+		    				encoderOpend = true;
+		    				
+		    			}
+					}
+					
+					
+					if (encoderOpend) {
+						ReByteEnco = ReceiveMsgUart(1);
+						if ( ReByteEnco != null) {
+							//Log.i(TAG,"Receive message = "+ ReStrEnco);
+							
+							//Add receive message from nanopan
+							encoderQueue.add(ReByteEnco);
+							
+							//view.append(ReStr);
+							//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+							Arrays.fill(ReByteEnco, (byte)0x00);
+							//ReStrEnco = null;
+						}
+					}
+					
+					handler.postDelayed(rencoder,50);
+				}
+				
+			   }
+	 }
+	
+	
+	
+	public class CombineThread implements Runnable {
+
+		   
+		public void run() {
+			
+			if (debugQueue)
+			{
+				byte[] beSendMsg = new byte[beSentMessage];;
+				if (nanoQueue.size() >= getNanoDataSize 
+						&& encoderQueue.size() >= getEncoderDataSize) 
+				{
+					
+					Arrays.fill(beSendMsg, (byte)0x00);
+					Log.i(TAG,"nano size = " + nanoQueue.size() + " encoderQueue size = " + encoderQueue.size());
+				
+					// Two input here.
+					ArrayList<byte[]> nanoData = getRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
+					ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
+					
+					
+					//Calculate nanopan data and encoder data here.
+					//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
+					//Save to byte array beSendMsg[13]
+					//....................
+					byte[] nanoByte = nanoData.get(0);
+					byte[] encoByte = encoderData.get(0);
+					
+					int n = (int)nanoByte[0];
+					int e = (int)encoByte[0];
+					
+					Log.i(TAG,"nanoByte = "  +n + " encoByte=" +e );
+					
+					encoderCount = 0;
+					nanoCount = 0;
+					
+					
+					nanoQueue.clear();
+					encoderQueue.clear();
+					
+					
+					handler.postDelayed(rcombind,200);
+
+					//End
+					
+					// One Output Here
+					//SendMsgUart(beSendMsg.toString(),1);
+				}
+			
+		    }
+			else
+			{
+			
+			
+				if(encoderOpend == true && nanoOpend == true)
+				{
+					byte[] beSendMsg = new byte[beSentMessage];;
+					if (nanoQueue.size() >= getNanoDataSize 
+							&& encoderQueue.size() >= getEncoderDataSize) 
+						
+						Arrays.fill(beSendMsg, (byte)0x00);
+						
+					
+						// Two input here.
+						ArrayList<byte[]> nanoData = getRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
+						ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
+						
+						
+						//Calculate nanopan data and encoder data here.
+						//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
+						//Save to byte array beSendMsg[13]
+						//....................
+						byte[] nanoByte = nanoData.get(0);
+						byte[] encoByte = encoderData.get(0);
+						
+						int a = (int)encoByte[0];
+						
+						beSendMsg[0] = 0x53;
+						beSendMsg[1] = 0x09;
+						//.................
+						
+						//End
+						
+						//encoderCount = 0;
+						//nanoCount = 0;
+						
+						
+						nanoQueue.clear();
+						encoderQueue.clear();
+						// One Output Here
+						SendMsgUart(beSendMsg.toString(),1);
+						
+					}
+				}
+			}
+	}
+ 
+	
+	
+	
+	public static ArrayList<byte[]> getRange(ArrayList<byte[]> list, int start, int last) {
+
+		ArrayList<byte[]> temp = new ArrayList<byte[]>();
+
+		for (int x = start; x < last; x++) {
+			temp.add(list.get(x));
+			}
+
+		return temp;
+	}
+	
+
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -256,7 +562,8 @@ public class MainActivity extends Activity {
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
 		timer.cancel();
-		CloseUart(fd);
+		MainActivity.CloseUart(encFd);
+		MainActivity.CloseUart(nanoFd);
 		Uart_Check = false;
 		super.onDestroy();
 	}
@@ -275,10 +582,10 @@ public class MainActivity extends Activity {
 	}
 	
 	public static native int WriteDemoData(int[] data, int size);
-	public static native int OpenUart(String str);
-	public static native void CloseUart(int i);
-	public static native int SetUart(int i);
-	public static native int SendMsgUart(String msg);
-	public static native String ReceiveMsgUart();
+	public static native int OpenUart(String str, int fdNum);
+	public static native void CloseUart(int fdNum);
+	public static native int SetUart(int i , int fdNum);
+	public static native int SendMsgUart(String msg,int fdNum);
+	public static native byte[] ReceiveMsgUart(int fdNum);
 	public static native int StartCal();
 }

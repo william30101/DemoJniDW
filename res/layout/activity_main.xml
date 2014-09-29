@@ -75,4 +75,21 @@
         android:layout_alignRight="@+id/statustext"
         android:text="WriteUart" />
 
+    <Button
+        android:id="@+id/thrbtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/btn2"
+        android:layout_below="@+id/btn2"
+        android:layout_marginTop="38dp"
+        android:text="startThread" />
+
+    <TextView
+        android:id="@+id/nanoText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/statusText"
+        android:layout_below="@+id/edText1"
+        android:text="Disconnect" />
+
 </RelativeLayout>
