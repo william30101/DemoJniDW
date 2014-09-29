@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
 
 	byte[] ReByteEnco = new byte[11];
 	byte[] ReByteNano = new byte[50];
-	boolean debugQueue = true;
+	boolean debugQueue = false;
 	private int nanoCount = 0 , encoderCount = 0;  
 	
 	// We could modify here , to chage how many data should we get from queue.
@@ -216,14 +216,17 @@ public class MainActivity extends Activity {
 					
 					if (sub.equals("btn1"))
 					{
-						String[] da = dataText.getText().toString().trim().split("\\s+");
-						Arrays.fill(wnum, 0);
-						for (int i = 0 ; i < da.length ; i++ )
+						if (!dataText.getText().toString().matches(""))
 						{
-							wnum[i] = Integer.parseInt(da[i]);
+							String[] da = dataText.getText().toString().trim().split("\\s+");
+							Arrays.fill(wnum, 0);
+							for (int i = 0 ; i < da.length ; i++ )
+							{
+								wnum[i] = Integer.parseInt(da[i]);
+							}
+		    			
+							WriteDemoData(wnum,da.length);
 						}
-	    			
-						WriteDemoData(wnum,da.length);
 					}
 					else if (sub.equals("btn2"))
 					{
@@ -396,7 +399,7 @@ public class MainActivity extends Activity {
 						if (encFd > 0 )
 		    			{
 		    				// Setting uart
-		    				nanoText.setText("Connected");
+							statusText.setText("Connected");
 		    				Baud_rate = 1; // 115200
 		    				MainActivity.SetUart(Baud_rate,1);
 		    				
@@ -503,7 +506,7 @@ public class MainActivity extends Activity {
 						byte[] nanoByte = nanoData.get(0);
 						byte[] encoByte = encoderData.get(0);
 						
-						int a = (int)encoByte[0];
+						int a = (int)encoByte[0]; // Get byte data from arraylist, 
 						
 						beSendMsg[0] = 0x53;
 						beSendMsg[1] = 0x09;

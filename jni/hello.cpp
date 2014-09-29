@@ -21,7 +21,7 @@
 #endif
 
 static int fd , nanoFd , driveFd;
-static int debugData = true;
+static int debugData = false;
 struct termios newtio, oldtio;
 
 static const char *classPathName = "com/example/demojni/MainActivity";
