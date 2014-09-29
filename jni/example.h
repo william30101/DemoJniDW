@@ -1,3 +1,5 @@
+
+
 class Shape {
 public:
 	Shape() {
@@ -33,3 +35,13 @@ class Square : public Shape {
 };
 
 
+class Ope {
+	public:
+
+		static unsigned char beSendData[13];
+		virtual void initByteArray();
+		virtual int addToByteArray(unsigned char b, int count );
+		virtual void printByteArray(void);
+		virtual unsigned char* ByteArrayToString(void);
+
+};

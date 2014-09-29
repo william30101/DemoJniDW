@@ -27,7 +27,7 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
 
 
-
+	boolean debugQueue = false;
 
 	private static String TAG = "App";
 	EditText dataText;
@@ -45,7 +45,7 @@ public class MainActivity extends Activity {
 
 	byte[] ReByteEnco = new byte[11];
 	byte[] ReByteNano = new byte[50];
-	boolean debugQueue = false;
+	
 	private int nanoCount = 0 , encoderCount = 0;  
 	
 	// We could modify here , to chage how many data should we get from queue.
@@ -439,19 +439,19 @@ public class MainActivity extends Activity {
 			
 			if (debugQueue)
 			{
-				byte[] beSendMsg = new byte[beSentMessage];;
+				//byte[] beSendMsg = new byte[beSentMessage];;
 				if (nanoQueue.size() >= getNanoDataSize 
 						&& encoderQueue.size() >= getEncoderDataSize) 
 				{
 					
-					Arrays.fill(beSendMsg, (byte)0x00);
+					//Arrays.fill(beSendMsg, (byte)0x00);
 					Log.i(TAG,"nano size = " + nanoQueue.size() + " encoderQueue size = " + encoderQueue.size());
 				
 					// Two input here.
 					ArrayList<byte[]> nanoData = getRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
 					ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
 					
-					
+					Log.i(TAG,"nanoData size = " + nanoData.size() + " encoderData size = " + encoderData.size());
 					//Calculate nanopan data and encoder data here.
 					//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
 					//Save to byte array beSendMsg[13]
@@ -463,6 +463,14 @@ public class MainActivity extends Activity {
 					int e = (int)encoByte[0];
 					
 					Log.i(TAG,"nanoByte = "  +n + " encoByte=" +e );
+					
+					
+					byte[] beSendMsg = Combine(nanoData,encoderData);
+					
+					for (int i=0;i<beSendMsg.length;i++)
+						Log.i(TAG,"test["+ i + "] = " + beSendMsg[i]);
+					
+					Log.i(TAG,"send string = " + beSendMsg.toString());
 					
 					encoderCount = 0;
 					nanoCount = 0;
@@ -487,11 +495,12 @@ public class MainActivity extends Activity {
 			
 				if(encoderOpend == true && nanoOpend == true)
 				{
-					byte[] beSendMsg = new byte[beSentMessage];;
+					//byte[] beSendMsg = new byte[beSentMessage];;
 					if (nanoQueue.size() >= getNanoDataSize 
 							&& encoderQueue.size() >= getEncoderDataSize) 
+					{
 						
-						Arrays.fill(beSendMsg, (byte)0x00);
+						//Arrays.fill(beSendMsg, (byte)0x00);
 						
 					
 						// Two input here.
@@ -499,7 +508,7 @@ public class MainActivity extends Activity {
 						ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
 						
 						
-						//Calculate nanopan data and encoder data here.
+						//Calculate nanopan data and encoder data here (java layer).
 						//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
 						//Save to byte array beSendMsg[13]
 						//....................
@@ -508,8 +517,6 @@ public class MainActivity extends Activity {
 						
 						int a = (int)encoByte[0]; // Get byte data from arraylist, 
 						
-						beSendMsg[0] = 0x53;
-						beSendMsg[1] = 0x09;
 						//.................
 						
 						//End
@@ -517,15 +524,19 @@ public class MainActivity extends Activity {
 						//encoderCount = 0;
 						//nanoCount = 0;
 						
+						byte [] beSendMsg = Combine(nanoData,encoderData);
 						
+						for (int i=0;i<beSendMsg.length;i++)
+							Log.i(TAG,"test["+ i + "] = " + beSendMsg[i]);
+
 						nanoQueue.clear();
 						encoderQueue.clear();
 						// One Output Here
 						SendMsgUart(beSendMsg.toString(),1);
-						
 					}
 				}
 			}
+		}
 	}
  
 	
@@ -591,4 +602,5 @@ public class MainActivity extends Activity {
 	public static native int SendMsgUart(String msg,int fdNum);
 	public static native byte[] ReceiveMsgUart(int fdNum);
 	public static native int StartCal();
+	public static native byte[] Combine(ArrayList<byte[]> nanoq , ArrayList<byte[]> encoq);
 }

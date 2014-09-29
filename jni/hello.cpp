@@ -20,8 +20,11 @@
 #define	_TERMIOS_H_
 #endif
 
-static int fd , nanoFd , driveFd;
+
 static int debugData = false;
+
+static int fd , nanoFd , driveFd;
+
 struct termios newtio, oldtio;
 
 static const char *classPathName = "com/example/demojni/MainActivity";
@@ -35,6 +38,66 @@ using namespace android;
 
 extern "C"
 {
+
+	JNIEXPORT jbyteArray JNICALL Native_Combine(JNIEnv *env,jobject mc ,
+			jobject nanoq, jobject encodq)
+	{
+
+		jclass nanoClazz = env->GetObjectClass(nanoq);
+		jmethodID nanoGetMethodID = env->GetMethodID(nanoClazz, "get", "(I)Ljava/lang/Object;");
+		jmethodID nanoSizeMethodID = env->GetMethodID(nanoClazz, "size", "()I");
+		int nanoSize = env->CallIntMethod(nanoq, nanoSizeMethodID);
+
+
+		jclass encoClazz = env->GetObjectClass(encodq);
+		//ArrayList_class       = env->FindClass( "java/util/ArrayList" );
+		jmethodID encoGetMethodID = env->GetMethodID(encoClazz, "get", "(I)Ljava/lang/Object;");
+		jmethodID encoSizeMethodID = env->GetMethodID(encoClazz, "size", "()I");
+		int encoderSize = env->CallIntMethod(encodq, encoSizeMethodID);
+
+		LOGE("nanoQueue's size is : %d", nanoSize);
+		LOGE("encoderQueue's size is : %d", encoderSize);
+
+
+		 for (int i = 0; i < nanoSize; i++)
+		 {
+				jbyteArray nanoByte = (jbyteArray)env->CallObjectMethod(nanoq, nanoGetMethodID, i);
+
+				jbyte *arr   =   env-> GetByteArrayElements(nanoByte, 0);
+				char* c=(char*)arr;
+
+				LOGI("nanobyte = %s",c);
+		 }
+
+
+		 for (int i = 0; i < encoderSize; i++)
+		 {
+				jbyteArray encoByte = (jbyteArray)env->CallObjectMethod(encodq, nanoGetMethodID, i);
+
+				jbyte *arr   =   env-> GetByteArrayElements(encoByte, 0);
+				char* c=(char*)arr;
+
+				LOGI("encobyte = %s",c);
+		 }
+
+		 Ope *op = new Ope();
+
+		 op->initByteArray();
+
+		 op->addToByteArray('G',2);
+		 op->printByteArray();
+
+		 //Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
+		 //Save to byte array beSendMsg[13]
+
+		 unsigned char * beSendMsgchar = op->ByteArrayToString();
+
+		 jbyteArray beSendMsg = env->NewByteArray (13);
+		 env->SetByteArrayRegion (beSendMsg, 0, 13, reinterpret_cast<jbyte*>(beSendMsgchar));
+
+		 return  beSendMsg;
+	}
+
 
 	JNIEXPORT jint JNICALL Native_StartCal(JNIEnv *env,jobject mc)
 	{
@@ -83,16 +146,19 @@ extern "C"
 		if (fdnum == 1)
 		{
 			driveFd = open(sall, O_RDWR | O_NOCTTY | O_NDELAY);
+			fd = driveFd;
 		}
 		else if (fdnum == 2)
 		{
 			nanoFd = open(sall, O_RDWR | O_NOCTTY | O_NDELAY);
+			fd = nanoFd;
 		}
 
 		env->ReleaseStringUTFChars(s, str2);
 
 		free(sall);
-		return driveFd;
+
+		return fd;
 	}
 
 	JNIEXPORT void JNICALL Native_CloseUart(JNIEnv *env,jobject mc, jint fdnum)
@@ -249,6 +315,8 @@ extern "C"
 		{"WriteDemoData",   "([II)I",   	(void *)Native_WriteDemoData},
 		{"StartCal",   "()I",   	(void *)Native_StartCal},
 		{"CloseUart",   "(I)V",   	(void *)Native_CloseUart},
+		{"Combine",   "(Ljava/util/ArrayList;Ljava/util/ArrayList;)[B",   	(void *)Native_Combine},
+
 
 
 	};
