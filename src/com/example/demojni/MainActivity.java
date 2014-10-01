@@ -27,7 +27,7 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
 
 
-	boolean debugQueue = true;
+	boolean debugQueue = false;
 
 	private static String TAG = "App";
 	EditText dataText;
@@ -46,10 +46,12 @@ public class MainActivity extends Activity {
 	byte[] ReByteEnco = new byte[11];
 	byte[] ReByteNano = new byte[50];
 	
+	
+	
 	private int nanoCount = 0 , encoderCount = 0;  
 	
 	// We could modify here , to chage how many data should we get from queue.
-	private int getNanoDataSize = 1 , getEncoderDataSize = 2 , beSentMessage = 13;
+	private int getNanoDataSize = 3 , getEncoderDataSize = 2 , beSentMessage = 13;
 	private ArrayList<float[]> nanoQueue = new ArrayList<float[]>();
 	private ArrayList<byte[]> encoderQueue = new ArrayList<byte[]>();
 	private Handler handler = new Handler();
@@ -57,12 +59,16 @@ public class MainActivity extends Activity {
 			"#-001.10:017:003:015"};
 	private String testdata2 = "12 45 89 45 36 12";
 	
-	private String startNanoPan[]={" INIT 3 1 2 3\r\n","MODE 0\r\n","START\r\n"};
+	private String NanoPanCmd[]={"INIT 3 1 2 3\r\n","MODE 0\r\n"};
+	private String startNanoPan="START\r\n";
 	private int startNum = 0;
 	
 	Runnable rnano = new NanoThread();
 	Runnable rencoder = new EncoderThread();
 	Runnable rcombine = new CombineThread();
+	
+	
+	float[] nanoFloat = new float[getNanoDataSize];
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -142,9 +148,9 @@ public class MainActivity extends Activity {
 	    			
 	    			break;
 	    		case R.id.btn3 : 
-	    			Runnable r3 = new MyThread(v);
-                   	new Thread(r3).start();
-	    				
+	    			//Runnable r3 = new MyThread(v);
+                   //	new Thread(r3).start();
+	    			MainActivity.SendMsgUart(startNanoPan,2);
 	    			break;
 	    			
 	    		case R.id.uartBtn : 
@@ -155,17 +161,25 @@ public class MainActivity extends Activity {
 	    			{
 	    				// Setting uart
 	    				Uart_Check = true;
-	    				statusText.setText("Connected");
+	    				//statusText.setText("Connected");
 	    				Baud_rate = 1; // 115200
 	    				MainActivity.SetUart(Baud_rate,2);
 	    				
 	    			}
 	    			break;
-	    		case R.id.readbtn : 
-	    			if (fd > 0 )
+	    		case R.id.uartReadBtn : 
+	    			
+	    			
+	    			MainActivity.SendMsgUart(NanoPanCmd[startNum],2);
+	    			if (startNum < 1)
+	    				startNum++;
+	    			else
+	    				startNum = 0;
+	    			/*if (fd > 0 )
 	    			{
 	    				MainActivity.ReceiveMsgUart(2);
 	    			}
+	    			*/
 	    			break;
 	    		case R.id.uartWriteBtn : 
 	    			if (fd > 0 )
@@ -188,6 +202,7 @@ public class MainActivity extends Activity {
 	                   	//Start Combine Thread
 	                   	//Runnable rcombind = new CombineThread();
 	                   	//new Thread(rcombind).start();
+
 	                   	handler.postDelayed(rcombine, 200);
 	                   	
 	                   	
@@ -277,7 +292,8 @@ public class MainActivity extends Activity {
 					}
 					else if (sub.equals("btn3"))
 					{
-						StartCal();
+						//StartCal();
+						//MainActivity.SendMsgUart(startNanoPan,2);
 					}			
 				
 			   }
@@ -324,7 +340,7 @@ public class MainActivity extends Activity {
 					if(nanoOpend == false)
 					{
 						// Use UART1 for nanopan
-						nanoFd = MainActivity.OpenUart("ttymxc0",2);
+						nanoFd = MainActivity.OpenUart("ttymxc4",2);
 						if (nanoFd > 0 )
 		    			{
 		    				// Setting uart
@@ -334,27 +350,40 @@ public class MainActivity extends Activity {
 		    				
 		    				nanoOpend = true;
 		    				
-		    				while(startNum < 3)
+		    				/*while(startNum < 3)
 		    				{
 		    					MainActivity.SendMsgUart(startNanoPan[startNum], 2);
 		    					startNum++;
-		    				}
+		    				}*/
+		    				
+		    				//startNum = 0;
 		    			}
 					}
-					
+					;
 					
 					if (nanoOpend) {
 						ReStrNano = ReceiveMsgUart(2);
 						if ( ReStrNano != null) {
-							Log.i(TAG,"Receive message = "+ ReStrNano);
-							String[] daf = ReStrNano.split(":");
-							float[] myflot = {Float.parseFloat(daf[0].substring(2, daf[0].length())),0};
-							//Add receive message from nanopan
-							
-							nanoQueue.add(myflot);
-							//view.append(ReStr);
-							//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-							ReStrNano = null;
+							//Log.i(TAG,"Nano Receive message = "+ ReStrNano + " leng= " + ReStrNano.length());
+							String[] line20 =  ReStrNano.split("\r\n");
+							//Log.i(TAG,"Nano line20 = " + line20[0]);
+							for(int i=0 ;i< line20.length;i++)
+							{
+								//Log.i(TAG,"Nano line20[" + i + " ] = " + line20[i]);
+								if (line20[i].contains("#") && line20[i].length() >= 5)
+								{
+									String[] daf = line20[i].split(":");
+	
+								
+									float[] myflot = {Float.parseFloat(daf[0].substring(2, daf[0].length())),0};
+									//Add receive message from nanopan
+									Log.i(TAG,"Nano my float distance = " + myflot[0]);
+									nanoQueue.add(myflot);
+									//view.append(ReStr);
+									//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+									ReStrNano = null;
+								}
+							}
 						}
 					}
 					
@@ -383,7 +412,7 @@ public class MainActivity extends Activity {
 					byte[] encoBy = new byte[daf.length];
 					for(int i=0;i<daf.length ; i++)
 						encoBy[i] = Byte.parseByte(daf[i]);
-					
+				
 					encoderQueue.add(encoBy);
 					encoderCount++;
 					handler.postDelayed(rencoder,50);
@@ -409,7 +438,7 @@ public class MainActivity extends Activity {
 						if (encFd > 0 )
 		    			{
 		    				// Setting uart
-							statusText.setText("Connected");
+							//statusText.setText("Connected");
 		    				Baud_rate = 1; // 115200
 		    				MainActivity.SetUart(Baud_rate,1);
 		    				
@@ -469,7 +498,8 @@ public class MainActivity extends Activity {
 					float[] nanoFloat = nanoData.get(0);
 					byte[] encoByte = encoderData.get(0);
 
-					Log.i(TAG,"nanoFloat = "  +nanoFloat[0] );
+					for (int i=0;i<nanoFloat.length;i++)
+						Log.i(TAG,"nanoFloat [" + i +  " ] = " + nanoFloat[i] );
 					
 					
 					byte[] beSendMsg = Combine(nanoData,encoderData);
@@ -499,10 +529,13 @@ public class MainActivity extends Activity {
 			else
 			{
 			
-			
+				//Log.i(TAG,"encoderOpend = " + encoderOpend + "  nanoOpend = " + nanoOpend );
 				if(encoderOpend == true && nanoOpend == true)
 				{
 					//byte[] beSendMsg = new byte[beSentMessage];;
+					
+					Log.i(TAG,"nanoQueue.size() = "  +nanoQueue.size() + " encoderQueue.size() = " +encoderQueue.size() );
+					
 					if (nanoQueue.size() >= getNanoDataSize 
 							&& encoderQueue.size() >= getEncoderDataSize) 
 					{
@@ -519,11 +552,17 @@ public class MainActivity extends Activity {
 						//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
 						//Save to byte array beSendMsg[13]
 						//....................
-						float[] nanoFloat = nanoData.get(0);
+						
+						for (int i=0;i<nanoData.size() ; i++)
+						{
+							nanoFloat = nanoData.get(i);
+							Log.i(TAG,"combine nanoFloat [" + i +  " ] = "  +nanoFloat[0] );
+						}
+						
 						byte[] encoByte = encoderData.get(0);
+					
 						
-						
-						Log.i(TAG,"nanoFloat = "  +nanoFloat );
+						Combine(nanoData,encoderData);
 						//.................
 						
 						//End
@@ -531,17 +570,19 @@ public class MainActivity extends Activity {
 						//encoderCount = 0;
 						//nanoCount = 0;
 						
-						byte [] beSendMsg = Combine(nanoData,encoderData);
+						/*byte [] beSendMsg = Combine(nanoData,encoderData);
 						
 						for (int i=0;i<beSendMsg.length;i++)
 							Log.i(TAG,"test["+ i + "] = " + beSendMsg[i]);
-
+						 */
 						nanoQueue.clear();
 						encoderQueue.clear();
 						// One Output Here
-						SendMsgUart(beSendMsg.toString(),1);
+						//SendMsgUart(beSendMsg.toString(),1);
 					}
 				}
+				
+				handler.postDelayed(rcombine,200);
 			}
 		}
 	}
@@ -595,6 +636,8 @@ public class MainActivity extends Activity {
 		timer.cancel();
 		MainActivity.CloseUart(encFd);
 		MainActivity.CloseUart(nanoFd);
+		nanoQueue.clear();
+		encoderQueue.clear();
 		Uart_Check = false;
 		super.onDestroy();
 	}

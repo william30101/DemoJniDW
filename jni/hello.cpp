@@ -300,6 +300,8 @@ extern "C"
 		}
 		else if (len > 0)
 		{
+			//LOGI("read on native function buf = %s" ,buffer);
+
 			return env->NewStringUTF(buffer);
 		}
 
