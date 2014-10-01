@@ -43,6 +43,8 @@ extern "C"
 			jobject nanoq, jobject encodq)
 	{
 
+
+
 		jclass nanoClazz = env->GetObjectClass(nanoq);
 		jmethodID nanoGetMethodID = env->GetMethodID(nanoClazz, "get", "(I)Ljava/lang/Object;");
 		jmethodID nanoSizeMethodID = env->GetMethodID(nanoClazz, "size", "()I");
@@ -59,17 +61,34 @@ extern "C"
 		LOGE("encoderQueue's size is : %d", encoderSize);
 
 
+		//nanoFloatArray = env->NewFloatArray(nanoSize);
+
+
+		jfloat nanoFloatArray[nanoSize];
+		//nanoPan data save in this array.
+
+		jfloat encoderFloatArray[encoderSize];
+		//encoder data save in this array.
+
+
+
+
+		//encoderFloatArray = env->NewFloatArray(encoderSize);
+
+		//jfloat nanoTempArray[nanoSize];
+		//jfloat encoderTempArray[encoderSize];
+
 		 for (int i = 0; i < nanoSize; i++)
 		 {
-				jbyteArray nanoByte = (jbyteArray)env->CallObjectMethod(nanoq, nanoGetMethodID, i);
-
-				jbyte *arr   =   env-> GetByteArrayElements(nanoByte, 0);
-				char* c=(char*)arr;
-
-				LOGI("nanobyte = %s",c);
+			jfloatArray nanoTemp = (jfloatArray)env->CallObjectMethod(nanoq, nanoGetMethodID, i);
+			jfloat* flt1 = env->GetFloatArrayElements( nanoTemp,0);
+			LOGI("jni nanobyte = %.2f i = %d",flt1[0],i);
+			nanoFloatArray[i] = flt1[0];
 		 }
 
 
+		 //LOGI("jni nanobyte = %.2f",nanoFloatArray[0]);
+/*
 		 for (int i = 0; i < encoderSize; i++)
 		 {
 				jbyteArray encoByte = (jbyteArray)env->CallObjectMethod(encodq, nanoGetMethodID, i);
@@ -79,10 +98,11 @@ extern "C"
 
 				LOGI("encobyte = %s",c);
 		 }
-
+*/
 		 Ope *op = new Ope();
 
 		 op->initByteArray();
+
 
 		 op->addToByteArray('G',2);
 		 op->printByteArray();
@@ -161,7 +181,7 @@ extern "C"
 		return fd;
 	}
 
-	JNIEXPORT void JNICALL Native_CloseUart(JNIEnv *env,jobject mc, jint fdnum)
+	JNIEXPORT jint JNICALL Native_CloseUart(JNIEnv *env,jobject mc, jint fdnum)
 	{
 
 		close(fdnum);
@@ -238,83 +258,68 @@ extern "C"
 		{
 			write(nanoFd, buf, len);
 		}
+		LOGI("Write data = %s",buf);
 		env->ReleaseStringUTFChars(str, buf);
 	}
 
-	JNIEXPORT jbyteArray JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc, jint fdnum)
+	JNIEXPORT jstring JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc, jint fdnum)
 	{
 		char buffer[255];
 		char buf[255];
 		char buffertest[255] = {'a','b','c','d','\0'};
 		int len, i = 0, k = 0 , count = 0;
+		jfloatArray result;
 		memset(buffer, 0, sizeof(buffer));
 		memset(buf, 0, sizeof(buf));
+
 
 		if (fdnum == 1)
 			len = read(driveFd, buffer, 255);
 		else if (fdnum == 2)
 			len = read(nanoFd, buffer, 255);
 
-		for (i =0;i< 255 ; i++)
-		{
-			if (debugData)
-			{
-				if (buffertest[i] != '\0')
-					count++;
-			}
-			else
-			{
-				if (buffer[i] != '\0')
-				count++;
-			}
-		}
-
-		LOGI("read on native function leng = %d" ,count);
-		if(count <= 0)
-		{
-			return NULL;
-		}
-
-		jbyteArray arr = env->NewByteArray(count);
 		if (debugData)
 		{
-			env->SetByteArrayRegion(arr,0,count, (jbyte*)buffertest);
+			for (i =0;i< 255 ; i++)
+			{
+
+				if (buffertest[i] != '\0')
+					count++;
+
+			}
+
+			LOGI("read on native function leng = %d" ,count);
+			if(count <= 0)
+			{
+				return NULL;
+			}
+			//jbyteArray arr = env->NewByteArray(count);
+			//env->SetByteArrayRegion(arr,0,count, (jbyte*)buffertest);
+
+			return env->NewStringUTF(buffer);
 		}
-		else
-			env->SetByteArrayRegion(arr,0,count, (jbyte*)buffer);
+		else if (len > 0)
+		{
+			return env->NewStringUTF(buffer);
+		}
 
 		//env->ReleaseByteArrayElements(arr, 0 );
 
-		return arr;
+		return NULL;
 		/////////////////
 
-
-/*
-		if (len > 0)
-		{
-			buffer[len]='\0';
-
-			LOGI("read buffer = %s ",buffer);
-
-			//return env->NewStringUTF(buffer);
-			return buffer;
-		}
-		else
-			buffer[0] = '0';
-
-			return buffer;*/
 	}
 
 
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
-		{"ReceiveMsgUart",   "(I)[B",(void *)Native_ReceiveMsgUart},
+		{"ReceiveMsgUart",   "(I)Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
 		{"SendMsgUart",   "(Ljava/lang/String;I)I",  (void *)Native_SendMsgUart},
 		{"SetUart",   "(II)I",   					(void *)Native_SetUart},
 		{"OpenUart",   "(Ljava/lang/String;I)I",   	(void *)Native_OpenUart},
 		{"WriteDemoData",   "([II)I",   	(void *)Native_WriteDemoData},
 		{"StartCal",   "()I",   	(void *)Native_StartCal},
-		{"CloseUart",   "(I)V",   	(void *)Native_CloseUart},
+		{"CloseUart",   "(I)I",   	(void *)Native_CloseUart},
 		{"Combine",   "(Ljava/util/ArrayList;Ljava/util/ArrayList;)[B",   	(void *)Native_Combine},
 
 

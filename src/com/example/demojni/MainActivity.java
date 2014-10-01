@@ -27,7 +27,7 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
 
 
-	boolean debugQueue = false;
+	boolean debugQueue = true;
 
 	private static String TAG = "App";
 	EditText dataText;
@@ -50,15 +50,19 @@ public class MainActivity extends Activity {
 	
 	// We could modify here , to chage how many data should we get from queue.
 	private int getNanoDataSize = 1 , getEncoderDataSize = 2 , beSentMessage = 13;
-	private ArrayList<byte[]> nanoQueue = new ArrayList<byte[]>();
+	private ArrayList<float[]> nanoQueue = new ArrayList<float[]>();
 	private ArrayList<byte[]> encoderQueue = new ArrayList<byte[]>();
 	private Handler handler = new Handler();
-	private String testdata1 = "11 33 55 77 99 11";
+	private String nanoTestData[] = {"#-001.27:017:001:015","#-001.21:017:002:015",
+			"#-001.10:017:003:015"};
 	private String testdata2 = "12 45 89 45 36 12";
+	
+	private String startNanoPan[]={" INIT 3 1 2 3\r\n","MODE 0\r\n","START\r\n"};
+	private int startNum = 0;
 	
 	Runnable rnano = new NanoThread();
 	Runnable rencoder = new EncoderThread();
-	Runnable rcombind = new CombineThread();
+	Runnable rcombine = new CombineThread();
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -184,7 +188,7 @@ public class MainActivity extends Activity {
 	                   	//Start Combine Thread
 	                   	//Runnable rcombind = new CombineThread();
 	                   	//new Thread(rcombind).start();
-	                   	handler.postDelayed(rcombind, 200);
+	                   	handler.postDelayed(rcombine, 200);
 	                   	
 	                   	
 	    			break;
@@ -298,20 +302,21 @@ public class MainActivity extends Activity {
 						nanoBy[i] = Byte.parseByte(daf[i]);
 					*/
 					
-					byte[] nanoBy = ReceiveMsgUart(2);
+					//String nanoStr = ReceiveMsgUart(2);
+					if (nanoCount  > 3)
+						nanoCount = 0;
+						
+					String nanoStr = nanoTestData[nanoCount];
+					String[] daf = nanoStr.split(":");
+					float[] myflot = {Float.parseFloat(daf[0].substring(2, daf[0].length())),0};
+					//Get data : #-001.27:017:001:015
+					 
 					
-					nanoQueue.add(nanoBy);
+					nanoQueue.add(myflot);
 					nanoCount++;
 					
 					
 					handler.postDelayed(rnano,100);
-					/*
-					try {
-						Thread.sleep(100l);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}*/
 				
 			    }
 				else
@@ -329,22 +334,27 @@ public class MainActivity extends Activity {
 		    				
 		    				nanoOpend = true;
 		    				
+		    				while(startNum < 3)
+		    				{
+		    					MainActivity.SendMsgUart(startNanoPan[startNum], 2);
+		    					startNum++;
+		    				}
 		    			}
 					}
 					
 					
 					if (nanoOpend) {
-						ReByteNano = ReceiveMsgUart(2);
-						if ( ReByteNano != null) {
-							//Log.i(TAG,"Receive message = "+ ReStr);
-
+						ReStrNano = ReceiveMsgUart(2);
+						if ( ReStrNano != null) {
+							Log.i(TAG,"Receive message = "+ ReStrNano);
+							String[] daf = ReStrNano.split(":");
+							float[] myflot = {Float.parseFloat(daf[0].substring(2, daf[0].length())),0};
 							//Add receive message from nanopan
-							nanoQueue.add(ReByteNano);
+							
+							nanoQueue.add(myflot);
 							//view.append(ReStr);
 							//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-							//ReStr = null;
-							Arrays.fill(ReByteNano, (byte)0x00);
-							
+							ReStrNano = null;
 						}
 					}
 					
@@ -366,7 +376,7 @@ public class MainActivity extends Activity {
 				{
 					Log.i(TAG,"EncoderThread running count = " + encoderCount);
 					//ReStrEnco = "12345";
-					/*ReStrEnco = testdata2;
+					ReStrEnco = testdata2;
 					//ReStr = "abcde";
 					
 					String[] daf = ReStrEnco.split("\\s+");
@@ -378,12 +388,12 @@ public class MainActivity extends Activity {
 					encoderCount++;
 					handler.postDelayed(rencoder,50);
 					
-					*/
 					
-					byte[] encoderBy = ReceiveMsgUart(1);
 					
-					encoderQueue.add(encoderBy);
-					encoderCount++;
+					//byte[] encoderBy = ReceiveMsgUart(1);
+					
+					//encoderQueue.add(encoderBy);
+					//encoderCount++;
 					
 					
 					handler.postDelayed(rencoder,50);
@@ -410,7 +420,7 @@ public class MainActivity extends Activity {
 					
 					
 					if (encoderOpend) {
-						ReByteEnco = ReceiveMsgUart(1);
+						//ReByteEnco = ReceiveMsgUart(1);
 						if ( ReByteEnco != null) {
 							//Log.i(TAG,"Receive message = "+ ReStrEnco);
 							
@@ -448,7 +458,7 @@ public class MainActivity extends Activity {
 					Log.i(TAG,"nano size = " + nanoQueue.size() + " encoderQueue size = " + encoderQueue.size());
 				
 					// Two input here.
-					ArrayList<byte[]> nanoData = getRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
+					ArrayList<float[]> nanoData = getNanoRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
 					ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
 					
 					Log.i(TAG,"nanoData size = " + nanoData.size() + " encoderData size = " + encoderData.size());
@@ -456,13 +466,10 @@ public class MainActivity extends Activity {
 					//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
 					//Save to byte array beSendMsg[13]
 					//....................
-					byte[] nanoByte = nanoData.get(0);
+					float[] nanoFloat = nanoData.get(0);
 					byte[] encoByte = encoderData.get(0);
-					
-					int n = (int)nanoByte[0];
-					int e = (int)encoByte[0];
-					
-					Log.i(TAG,"nanoByte = "  +n + " encoByte=" +e );
+
+					Log.i(TAG,"nanoFloat = "  +nanoFloat[0] );
 					
 					
 					byte[] beSendMsg = Combine(nanoData,encoderData);
@@ -480,12 +487,12 @@ public class MainActivity extends Activity {
 					encoderQueue.clear();
 					
 					
-					handler.postDelayed(rcombind,200);
+					handler.postDelayed(rcombine,200);
 
 					//End
 					
 					// One Output Here
-					//SendMsgUart(beSendMsg.toString(),1);
+					//SendMsgUart(beSendMsg.toString(),2);
 				}
 			
 		    }
@@ -504,7 +511,7 @@ public class MainActivity extends Activity {
 						
 					
 						// Two input here.
-						ArrayList<byte[]> nanoData = getRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
+						ArrayList<float[]> nanoData = getNanoRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
 						ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
 						
 						
@@ -512,11 +519,11 @@ public class MainActivity extends Activity {
 						//Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
 						//Save to byte array beSendMsg[13]
 						//....................
-						byte[] nanoByte = nanoData.get(0);
+						float[] nanoFloat = nanoData.get(0);
 						byte[] encoByte = encoderData.get(0);
 						
-						int a = (int)encoByte[0]; // Get byte data from arraylist, 
 						
+						Log.i(TAG,"nanoFloat = "  +nanoFloat );
 						//.................
 						
 						//End
@@ -553,6 +560,16 @@ public class MainActivity extends Activity {
 		return temp;
 	}
 	
+	public static ArrayList<float[]> getNanoRange(ArrayList<float[]> list, int start, int last) {
+
+		ArrayList<float[]> temp = new ArrayList<float[]>();
+
+		for (int x = start; x < last; x++) {
+			temp.add(list.get(x));
+			}
+
+		return temp;
+	}
 
 	
 	@Override
@@ -597,10 +614,10 @@ public class MainActivity extends Activity {
 	
 	public static native int WriteDemoData(int[] data, int size);
 	public static native int OpenUart(String str, int fdNum);
-	public static native void CloseUart(int fdNum);
+	public static native int CloseUart(int fdNum);
 	public static native int SetUart(int i , int fdNum);
 	public static native int SendMsgUart(String msg,int fdNum);
-	public static native byte[] ReceiveMsgUart(int fdNum);
+	public static native String ReceiveMsgUart(int fdNum);
 	public static native int StartCal();
-	public static native byte[] Combine(ArrayList<byte[]> nanoq , ArrayList<byte[]> encoq);
+	public static native byte[] Combine(ArrayList<float[]> nanoq , ArrayList<byte[]> encoq);
 }
