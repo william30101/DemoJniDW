@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
 	
 	private String NanoPanCmd[]={"INIT 3 1 2 3\r\n","MODE 0\r\n"};
 	private String startNanoPan="START\r\n";
-	private int startNum = 0;
+	private int startNum = 0 , minusNumber = 0 ;
 	
 	Runnable rnano = new NanoThread();
 	Runnable rencoder = new EncoderThread();
@@ -370,7 +370,7 @@ public class MainActivity extends Activity {
 							for(int i=0 ;i< line20.length;i++)
 							{
 								//Log.i(TAG,"Nano line20[" + i + " ] = " + line20[i]);
-								if (line20[i].contains("#") && line20[i].length() >= 5)
+								if (line20[i].contains("#") && line20[i].length() >= 5 && line20[i].contains(":"))
 								{
 									String[] daf = line20[i].split(":");
 	
@@ -486,8 +486,19 @@ public class MainActivity extends Activity {
 					//Arrays.fill(beSendMsg, (byte)0x00);
 					Log.i(TAG,"nano size = " + nanoQueue.size() + " encoderQueue size = " + encoderQueue.size());
 				
+					
+					minusNumber = nanoQueue.size() - getNanoDataSize;
 					// Two input here.
-					ArrayList<float[]> nanoData = getNanoRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
+					
+					 if ( nanoQueue.size() % 3  != 0)
+					 {
+						 Log.i(TAG,"Enter %3 != 0");
+						 minusNumber = nanoQueue.size() - getNanoDataSize - (nanoQueue.size() % 3);
+					 }
+					
+					// Two input here.
+					 Log.i(TAG," minus = " + minusNumber);
+					ArrayList<float[]> nanoData = getNanoRange(nanoQueue, minusNumber ,nanoQueue.size() - (nanoQueue.size() % 3));
 					ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
 					
 					Log.i(TAG,"nanoData size = " + nanoData.size() + " encoderData size = " + encoderData.size());
@@ -542,9 +553,17 @@ public class MainActivity extends Activity {
 						
 						//Arrays.fill(beSendMsg, (byte)0x00);
 						
-					
+						minusNumber = nanoQueue.size() - getNanoDataSize;
 						// Two input here.
-						ArrayList<float[]> nanoData = getNanoRange(nanoQueue,nanoQueue.size() - getNanoDataSize ,nanoQueue.size());
+						
+						 if ( nanoQueue.size() % 3  != 0)
+						 {
+							 
+							 minusNumber = nanoQueue.size() - getNanoDataSize - (nanoQueue.size() % 3);
+						 }
+						
+						// Two input here.
+						 ArrayList<float[]> nanoData = getNanoRange(nanoQueue, minusNumber ,nanoQueue.size() - (nanoQueue.size() % 3))  ;
 						ArrayList<byte[]> encoderData = getRange(encoderQueue,encoderQueue.size() - getEncoderDataSize ,encoderQueue.size());
 						
 						
@@ -604,7 +623,7 @@ public class MainActivity extends Activity {
 	public static ArrayList<float[]> getNanoRange(ArrayList<float[]> list, int start, int last) {
 
 		ArrayList<float[]> temp = new ArrayList<float[]>();
-
+		Log.i(TAG,"start = " + start + " last = " + last);
 		for (int x = start; x < last; x++) {
 			temp.add(list.get(x));
 			}

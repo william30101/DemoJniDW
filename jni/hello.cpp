@@ -84,6 +84,8 @@ extern "C"
 			jfloat* flt1 = env->GetFloatArrayElements( nanoTemp,0);
 			LOGI("jni nanobyte = %.2f i = %d",flt1[0],i);
 			nanoFloatArray[i] = flt1[0];
+
+			env->ReleaseFloatArrayElements(nanoTemp, flt1, 0);
 		 }
 
 
@@ -105,10 +107,13 @@ extern "C"
 
 
 		 op->addToByteArray('G',2);
-		 op->printByteArray();
+		 //op->printByteArray();
 
 		 //Output Data format  0x53 0x09 X4 X3 X2 X1 Y4 Y3 Y2 Y1 CRC2 CRC1 0x45
 		 //Save to byte array beSendMsg[13]
+
+		 env->DeleteLocalRef(nanoq);
+		 env->DeleteLocalRef(encodq );
 
 		 unsigned char * beSendMsgchar = op->ByteArrayToString();
 
@@ -378,6 +383,5 @@ extern "C"
 			return result;
 	}
 }
-
 
 
