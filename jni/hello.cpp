@@ -52,7 +52,6 @@ extern "C"
 
 
 		jclass encoClazz = env->GetObjectClass(encodq);
-		//ArrayList_class       = env->FindClass( "java/util/ArrayList" );
 		jmethodID encoGetMethodID = env->GetMethodID(encoClazz, "get", "(I)Ljava/lang/Object;");
 		jmethodID encoSizeMethodID = env->GetMethodID(encoClazz, "size", "()I");
 		int encoderSize = env->CallIntMethod(encodq, encoSizeMethodID);
@@ -67,7 +66,7 @@ extern "C"
 		jfloat nanoFloatArray[nanoSize];
 		//nanoPan data save in this array.
 
-		jfloat encoderFloatArray[encoderSize];
+		jint encoderIntArray[encoderSize];
 		//encoder data save in this array.
 
 
@@ -90,17 +89,25 @@ extern "C"
 
 
 		 //LOGI("jni nanobyte = %.2f",nanoFloatArray[0]);
-/*
-		 for (int i = 0; i < encoderSize; i++)
-		 {
-				jbyteArray encoByte = (jbyteArray)env->CallObjectMethod(encodq, nanoGetMethodID, i);
 
-				jbyte *arr   =   env-> GetByteArrayElements(encoByte, 0);
-				char* c=(char*)arr;
+		 for (int i = 0; i < encoderSize; i++) {
+			 jboolean isCopy;
+			 jintArray encoIntArr = (jintArray) env->CallObjectMethod(encodq,nanoGetMethodID, i);
+			 int * p= env->GetIntArrayElements(encoIntArr, &isCopy);
+			 //jint byteLeng = env-> GetArrayLength(encoByte);
 
-				LOGI("encobyte = %s",c);
+			 //jbyte *arr   =   env-> GetByteArrayElements(encoByte, 0);
+
+
+
+			 LOGI("encobyte LWheel = %d RWheel = %d compass = %d", p[0] , p[1] , p[2]);
+			 //c=(unsigned char*)arr;
+
+			 //LOGI("encobyte = %s",c);
+			 env->ReleaseIntArrayElements(encoIntArr, p, 0);
 		 }
-*/
+
+
 		 Ope *op = new Ope();
 
 		 op->initByteArray();
@@ -194,7 +201,7 @@ extern "C"
 
 	JNIEXPORT jint JNICALL Native_SetUart(JNIEnv *env,jobject mc, jint i,jint fdnum)
 	{
-		int Baud_rate[] = { B9600, B115200};
+		int Baud_rate[] = { B19200, B115200};
 		LOGI("Native_SetUart %d", i);
 
 		if (fdnum == 1)
@@ -249,23 +256,55 @@ extern "C"
 			return -1;
 	}
 
-	JNIEXPORT jint JNICALL Native_SendMsgUart(JNIEnv *env,jobject mc, jstring str, jint fdnum)
-	{
-		int len;
-		const char *buf;
-		buf = env->GetStringUTFChars(str, NULL);
-		len = env->GetStringLength(str);
-		if (fdnum == 1)
+	JNIEXPORT jint JNICALL Native_SendMsgUart(JNIEnv *env,jobject mc, jstring str, jint fdnum , jbyteArray inByte)
 		{
-			write(driveFd, buf, len);
+			int len;
+			jboolean isCopy;
+			const char *strBuf;
+
+			jbyte* a = env->GetByteArrayElements(inByte,&isCopy);
+			char *buf = (char*)a;
+
+			strBuf = env->GetStringUTFChars(str, NULL);
+			len = env->GetStringLength(str);
+			if (fdnum == 1)
+			{
+
+				write(driveFd, buf, len);
+			}
+			else if (fdnum == 2)
+			{
+				write(nanoFd, buf, len);
+			}
+			LOGI("len = %d",len);
+			//LOGI("Write data 0 = %x",buf[0]);
+			//LOGI("Write data 1 = %x",buf[1]);
+			//LOGI("Write data 2 = %x",buf[2]);
+			//LOGI("Write data 3 = %x",buf[3]);
+			//LOGI("Write data 4 = %x",buf[4]);
+			//LOGI("Write data 5 = %x",buf[5]);
+
+			env->ReleaseStringUTFChars(str, strBuf);
+			env->ReleaseByteArrayElements(inByte, a, 0);
 		}
-		else if (fdnum == 2)
-		{
-			write(nanoFd, buf, len);
-		}
-		LOGI("Write data = %s",buf);
-		env->ReleaseStringUTFChars(str, buf);
-	}
+
+
+	JNIEXPORT jint JNICALL Native_SendMsgUartNano(JNIEnv *env,jobject mc, jstring str)
+			{
+				int len;
+				const char *strBuf;
+
+				strBuf = env->GetStringUTFChars(str, NULL);
+				len = env->GetStringLength(str);
+				write(nanoFd, strBuf, len);
+
+				LOGI("len = %d",len);
+				//LOGI("Write data 3 = %x",strBuf[3]);
+				//LOGI("Write data 4 = %x",strBuf[4]);
+				//LOGI("Write data 5 = %x",strBuf[5]);
+
+				env->ReleaseStringUTFChars(str, strBuf);
+			}
 
 	JNIEXPORT jstring JNICALL Native_ReceiveMsgUart(JNIEnv *env,jobject mc, jint fdnum)
 	{
@@ -278,11 +317,19 @@ extern "C"
 		memset(buf, 0, sizeof(buf));
 
 
+
+
+
+
+
 		if (fdnum == 1)
 			len = read(driveFd, buffer, 255);
 		else if (fdnum == 2)
 			len = read(nanoFd, buffer, 255);
 
+
+
+		LOGI("rec leng = %d  nanoFd = %d" ,len,nanoFd);
 		if (debugData)
 		{
 			for (i =0;i< 255 ; i++)
@@ -298,15 +345,28 @@ extern "C"
 			{
 				return NULL;
 			}
+
+			return env->NewStringUTF(buffertest);
 			//jbyteArray arr = env->NewByteArray(count);
 			//env->SetByteArrayRegion(arr,0,count, (jbyte*)buffertest);
 
-			return env->NewStringUTF(buffer);
+			//jbyteArray array = env->NewByteArray(count);
+			//env->SetByteArrayRegion (array, 0, len, (jbyte*)(buffertest));
+
+			//return array;
 		}
 		else if (len > 0)
 		{
-			//LOGI("read on native function buf = %s" ,buffer);
+			LOGI("read on native function buf = %s" ,buffer);
 
+			//jbyteArray array = env->NewByteArray(len);
+
+			//env->SetByteArrayRegion (array, 0, len, (jbyte*)(buf));
+
+			//LOGI("read on native function buf[0] = %x  buf[1]= %x buf[2]= %x buf[3]= %x buf[4]= %x buf[5]= %x"
+			//						,buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5]);
+
+			buffer[len]='\0';
 			return env->NewStringUTF(buffer);
 		}
 
@@ -318,10 +378,56 @@ extern "C"
 	}
 
 
+	JNIEXPORT jbyteArray JNICALL Native_ReceiveByteMsgUart(JNIEnv *env,jobject mc, jint fdnum)
+		{
+			char buffer[255];
+			char buf[255];
+			char buffertest[255] = {'a','b','c','d','\0'};
+			jbyte nodatabyte[5] = {0x01,0x01,0x01,0x01,0x01};
+			int len, i = 0, k = 0 , count = 0;
+			jfloatArray result;
+			memset(buffer, 0, sizeof(buffer));
+			memset(buf, 0, sizeof(buf));
+
+			if (fdnum == 1)
+				len = read(driveFd, buffer, 255);
+			else if (fdnum == 2)
+				len = read(nanoFd, buffer, 255);
+
+
+
+			//LOGI("rec leng = %d" ,len);
+
+			if (len > 0)
+			{
+				LOGI("read on native function buf[0] = %x  buf[1]= %x buf[2]= %x buf[3]= %x buf[4]= %x buf[5]= %x"
+						,buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5]);
+
+				jbyteArray array = env->NewByteArray(len);
+
+				env->SetByteArrayRegion (array, 0, len, (jbyte*)(buffer));
+
+				return array;
+				//buffer[len]='\0';
+				//return env->NewStringUTF(buffer);
+			}
+
+			jbyteArray array = env->NewByteArray(5);
+			env->SetByteArrayRegion (array, 0, 5, (jbyte*)(nodatabyte));
+			//env->ReleaseByteArrayElements(arr, 0 );
+
+			return array;
+			/////////////////
+
+		}
+
+
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
 		{"ReceiveMsgUart",   "(I)Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
-		{"SendMsgUart",   "(Ljava/lang/String;I)I",  (void *)Native_SendMsgUart},
+		{"ReceiveByteMsgUart",   "(I)[B",(void *)Native_ReceiveByteMsgUart},
+		{"SendMsgUart",   "(Ljava/lang/String;I[B)I",  (void *)Native_SendMsgUart},
+		{"SendMsgUartNano",   "(Ljava/lang/String;)I",  (void *)Native_SendMsgUartNano},
 		{"SetUart",   "(II)I",   					(void *)Native_SetUart},
 		{"OpenUart",   "(Ljava/lang/String;I)I",   	(void *)Native_OpenUart},
 		{"WriteDemoData",   "([II)I",   	(void *)Native_WriteDemoData},

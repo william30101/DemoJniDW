@@ -25,39 +25,8 @@
         android:layout_height="wrap_content"
         android:layout_below="@+id/btn1"
         android:layout_centerHorizontal="true"
-        android:text="Write Data by File" />
-
-    <Button
-        android:id="@+id/btn1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_centerVertical="true"
-        android:text="Write Data by Text" />
-
-    <Button
-        android:id="@+id/btn3"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/btn1"
-        android:layout_centerHorizontal="true"
-        android:text="Start Cal" />
-
-    <Button
-        android:id="@+id/uartReadBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/btn3"
-        android:layout_alignRight="@+id/edText1"
-        android:text="ReadUart" />
-
-    <Button
-        android:id="@+id/uartBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/btn3"
-        android:layout_alignLeft="@+id/btn2"
-        android:text="Uart" />
+        android:text="Write Data by File"
+        android:visibility="invisible" />
 
     <TextView
         android:id="@+id/statusText"
@@ -67,23 +36,6 @@
         android:layout_alignParentRight="true"
         android:text="Disconnect" />
 
-    <Button
-        android:id="@+id/uartWriteBtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/btn1"
-        android:layout_alignRight="@+id/statustext"
-        android:text="WriteUart" />
-
-    <Button
-        android:id="@+id/thrbtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/btn2"
-        android:layout_below="@+id/btn2"
-        android:layout_marginTop="38dp"
-        android:text="startThread" />
-
     <TextView
         android:id="@+id/nanoText"
         android:layout_width="wrap_content"
@@ -91,5 +43,55 @@
         android:layout_alignLeft="@+id/statusText"
         android:layout_below="@+id/edText1"
         android:text="Disconnect" />
+
+    <Button
+        android:id="@+id/uartWriteBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn2"
+        android:layout_alignParentRight="true"
+        android:text="WriteUart"
+        android:visibility="invisible" />
+
+    <Button
+        android:id="@+id/uartReadBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/btn1"
+        android:layout_alignLeft="@+id/uartBtn"
+        android:text="1.INIT 2.MODE" />
+
+    <Button
+        android:id="@+id/btn1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/uartReadBtn"
+        android:layout_centerVertical="true"
+        android:text="3.START" />
+
+    <Button
+        android:id="@+id/btn3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/uartReadBtn"
+        android:layout_alignRight="@+id/uartWriteBtn"
+        android:text="SendEncoder" />
+
+    <Button
+        android:id="@+id/uartBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/btn3"
+        android:layout_alignBottom="@+id/btn3"
+        android:text="Open Uart" />
+
+    <Button
+        android:id="@+id/thrbtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/btn2"
+        android:layout_below="@+id/btn2"
+        android:layout_marginTop="41dp"
+        android:text="startThread" />
 
 </RelativeLayout>
