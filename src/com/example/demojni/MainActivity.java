@@ -229,7 +229,7 @@ public class MainActivity extends Activity {
 	    				//Start nano thread
 	    				//Runnable rnano = new NanoThread();
 	    				
-	    				handler.postDelayed(rNano, 100);
+	    				handler.postDelayed(rNano, nanoInterval);
 	    				
 	                   //	new Thread(rnano).start();
 	                   	//Start encoder thread
@@ -242,7 +242,7 @@ public class MainActivity extends Activity {
 	                   	//Runnable rcombind = new CombineThread();
 	                   	//new Thread(rcombind).start();
 
-	                   	handler.postDelayed(rCombine, 200);
+	                   	handler.postDelayed(rCombine, combineInterval);
 	                   	
 	                   	
 	    			break;
