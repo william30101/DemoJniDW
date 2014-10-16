@@ -1,6 +1,7 @@
 package com.example.demojni;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -8,30 +9,56 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Timer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+import org.xmlpull.v1.XmlPullParser;
+
+import android.annotation.TargetApi;
 import android.app.Activity;
+import android.content.Context;
+import android.content.res.Resources;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.AttributeSet;
 import android.util.Log;
+import android.util.Xml;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnTouchListener;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
 
+	
+	double D=11.83;
+	double pi=3.14;
+	double piD=(pi*D)/2,dt=0.2;
+	double X1,Y1,dX,dY;
+	double cosine,sine,VL,VR,V;
+	double W;
+	static double X0=0,Y0=0,initial=0,d_theta,theta1;
+	private double DegToRad = 3.141592653/180;
+	
 
-	boolean debugNanoQueue = false;
+	boolean debugNanoQueue = true;
 	boolean debugEncoderQueue = false;
 
 	private static String TAG = "App";
 	EditText dataText;
-	TextView statusText,nanoText;
+	TextView drivingStatus,nanoStatus;
 	Button writeBtn,writeFileBtn,startCalBtn,uartBtn,uartReadBtn,uartWriteBtn,thrBtn;
 	private int[] wnum;
 	File sdcard,file;
@@ -45,7 +72,7 @@ public class MainActivity extends Activity {
 	//byte[] ReByteEnco = new byte[11];
 	byte[] ReByteNano = new byte[50];
 	byte [] ReByteEnco = new byte[11];
-	private int nanoInterval = 100 , encoderWriteInterval = 80 , encoderReadInterval = 80 , combineInterval = 200;
+	private int nanoInterval = 100 , encoderWriteWiatInterval = 20 , encoderReadWaitInterval = 80 , combineInterval = 300;
 	
 	
 	
@@ -75,7 +102,9 @@ public class MainActivity extends Activity {
 	Runnable rWEncoder = new EncoderWriteThread();
 	Runnable rREncoder = new EncoderReadThread();
 	Runnable rCombine = new CombineThread();
+	Runnable rEncoder = new EncoderThreadPool();
 	
+	private ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 	
 	float[] nanoFloat = new float[getNanoDataSize];
 	
@@ -86,6 +115,14 @@ public class MainActivity extends Activity {
 	private static int waitingWriters = 0;
 	private static int readingReaders = 0;
 	
+	
+	private boolean isNeedAdd = false;
+	DirectionCmd direc = new DirectionCmd();
+	StopCmd scmd = new StopCmd();
+	AngleCmd angleCmd = new AngleCmd();
+	StretchCmd stretCmd = new StretchCmd();
+	
+	ByteArrayOutputStream retStreamDatas;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -100,7 +137,7 @@ public class MainActivity extends Activity {
 		uartReadBtn = (Button) findViewById(R.id.uartReadBtn);
 		uartWriteBtn = (Button) findViewById(R.id.uartWriteBtn);
 		thrBtn = (Button) findViewById(R.id.thrbtn);
-		
+
 		writeBtn.setOnClickListener(ClickListener);
 		writeFileBtn.setOnClickListener(ClickListener);
 		startCalBtn.setOnClickListener(ClickListener);
@@ -109,9 +146,57 @@ public class MainActivity extends Activity {
 		uartWriteBtn.setOnClickListener(ClickListener);
 		thrBtn.setOnClickListener(ClickListener);
 		
-		dataText = (EditText)findViewById(R.id.edText1);
-		//statusText = (TextView) findViewById(R.id.statustext);
-		nanoText = (TextView) findViewById(R.id.nanoText);
+		
+		drivingStatus = (TextView) findViewById(R.id.drivingStatusText);
+		nanoStatus = (TextView) findViewById(R.id.nanoStatusText);
+		//Open uart when App lunch
+		
+		if (OpenSetUartPort("ttymxc4") > 0)
+			drivingStatus.setText("Driving mxc4 connected");
+		
+		if (OpenSetUartPort("ttymxc2") > 0)
+			nanoStatus.setText("Nano mxc2 connected");
+		
+		
+		ImageButton backward = (ImageButton) findViewById(R.id.backward);
+		ImageButton forward = (ImageButton) findViewById(R.id.forward);
+		ImageButton left = (ImageButton) findViewById(R.id.left);
+		ImageButton right = (ImageButton) findViewById(R.id.right);
+		ImageButton stop = (ImageButton) findViewById(R.id.stop);
+		ImageButton forRig = (ImageButton) findViewById(R.id.forRig);
+		ImageButton forLeft = (ImageButton) findViewById(R.id.forLeft);
+		ImageButton bacRig = (ImageButton) findViewById(R.id.bacRig);
+		ImageButton bacLeft = (ImageButton) findViewById(R.id.bacLeft);
+
+		Button angleBottom = (Button) findViewById(R.id.angleBottom);
+		Button angleMiddle = (Button) findViewById(R.id.angleMiddle);
+		Button angleTop = (Button) findViewById(R.id.angleTop);
+		Button stretchBottom = (Button) findViewById(R.id.stretchBottom);
+		Button stretchTop = (Button) findViewById(R.id.stretchTop);
+
+		Button axisBtn = (Button) findViewById(R.id.axisBtn);
+
+		Button askBtn = (Button) findViewById(R.id.askBtn);
+
+		backward.setOnClickListener(ClickListener);
+		forward.setOnClickListener(ClickListener);
+		left.setOnClickListener(ClickListener);
+		right.setOnClickListener(ClickListener);
+		stop.setOnClickListener(ClickListener);
+		forRig.setOnClickListener(ClickListener);
+		forLeft.setOnClickListener(ClickListener);
+		bacRig.setOnClickListener(ClickListener);
+		bacLeft.setOnClickListener(ClickListener);
+
+		angleBottom.setOnClickListener(ClickListener);
+		angleMiddle.setOnClickListener(ClickListener);
+		angleTop.setOnClickListener(ClickListener);
+		stretchBottom.setOnClickListener(ClickListener);
+		stretchTop.setOnClickListener(ClickListener);
+
+		
+		nanoStatus = (TextView) findViewById(R.id.nanoStatusText);
+		drivingStatus = (TextView) findViewById(R.id.drivingStatusText);
 		
 		wnum = new int[500];
 		
@@ -178,7 +263,7 @@ public class MainActivity extends Activity {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					MainActivity.SendMsgUart(ReStrEnco,1,askEncoderData);
+					MainActivity.SendMsgUart(1,askEncoderData);
 	    			
 	    			//MainActivity.SendMsgUartNano(startNanoPan);
 	    			break;
@@ -186,8 +271,11 @@ public class MainActivity extends Activity {
 	    		case R.id.uartBtn : 
 	    			// Open Uart here
 	    			
-	    			OpenSetUartPort("ttymxc4");
-	    			OpenSetUartPort("ttymxc2");
+	    			if (OpenSetUartPort("ttymxc4") > 0)
+	    				drivingStatus.setText("Driving mxc4 connected");
+	    			
+	    			if (OpenSetUartPort("ttymxc2") > 0)
+	    				nanoStatus.setText("Nano mxc2 connected");
 	    			
 	    			/*
 	    			fd = MainActivity.OpenUart("ttymxc0",2);
@@ -226,25 +314,92 @@ public class MainActivity extends Activity {
 	    			
 	    			break;
 	    		case R.id.thrbtn : 
-	    				//Start nano thread
-	    				//Runnable rnano = new NanoThread();
-	    				
-	    				handler.postDelayed(rNano, nanoInterval);
-	    				
+	    				handler.postDelayed(rNano, 100);
+    				
 	                   //	new Thread(rnano).start();
 	                   	//Start encoder thread
 	    				//Runnable rencoder = new EncoderThread();
 	                   	//new Thread(rencoder).start();
-	                    handler.postDelayed(rWEncoder, encoderWriteInterval);
-	                    handler.postDelayed(rREncoder, encoderReadInterval);
+	                   //handler.postDelayed(rWEncoder, encoderWriteInterval);
+	                   // handler.postDelayed(rREncoder, encoderReadInterval);
 	                   	
 	                   	//Start Combine Thread
 	                   	//Runnable rcombind = new CombineThread();
 	                   	//new Thread(rcombind).start();
 
-	                   	handler.postDelayed(rCombine, combineInterval);
+
+	    				
+	    				handler.postDelayed(rEncoder, encoderWriteWiatInterval + encoderReadWaitInterval);
+	    				
+
+	                    
+	                   	handler.postDelayed(rCombine, 200);
 	                   	
 	                   	
+	    			break;
+	    		case R.id.angleBottom:
+					Log.i(TAG,"angleBottom");
+					//XMPPSet.XMPPSendText("james1", "pitchAngle bottom");
+				try {
+					SendUartByte("pitchAngle bottom");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+					break;
+				case R.id.angleMiddle:
+					Log.i(TAG,"angleMiddle");
+					//XMPPSet.XMPPSendText("james1", "pitchAngle middle");
+				try {
+					SendUartByte("pitchAngle middle");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+					break;
+				case R.id.angleTop:
+					Log.i(TAG,"angleTop");
+					//XMPPSet.XMPPSendText("james1", "pitchAngle top");
+				try {
+					SendUartByte("pitchAngle top");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+					break;
+				case R.id.stretchBottom:
+					Log.i(TAG,"stretchBottom");
+					//XMPPSet.XMPPSendText("james1", "stretch bottom");
+				try {
+					SendUartByte("stretch bottom");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+					break;
+				case R.id.stretchTop:
+					Log.i(TAG,"stretchTop");
+					//XMPPSet.XMPPSendText("james1", "stretch top");
+				try {
+					SendUartByte("stretch top");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+					break;
+
+	    		case R.id.right :	
+	    		case R.id.left :	
+	    		case R.id.backward :	
+	    		case R.id.forward :	
+	    		case R.id.forLeft :	
+	    		case R.id.forRig :	
+	    		case R.id.bacLeft :	
+	    		case R.id.bacRig :	
+	    			Runnable r3 = new MyThread(v);
+                   	new Thread(r3).start();
+
+	    			
 	    			break;
 	    		default:
 	    			Log.i(TAG,"Invaild Button function");
@@ -253,6 +408,39 @@ public class MainActivity extends Activity {
 	    }
 	};
 	
+	
+	private void SendUartByte(String inStr) throws IOException
+	{
+		
+		String[] inM = inStr.split("\\s+");
+		retStreamDatas = new ByteArrayOutputStream();
+		
+		if (inM[0].equals("pitchAngle") )
+		{
+			angleCmd.SetByte(inM);
+			retStreamDatas = angleCmd.GetAllByte();
+		}
+		else if (inM[0].equals("stretch"))
+		{
+			stretCmd.SetByte(inM);
+			retStreamDatas = stretCmd.GetAllByte();
+		}
+		
+		byte[] retBytes = retStreamDatas.toByteArray();
+		retStreamDatas.reset();
+		
+		for (int i =0;i<retBytes.length;i++)
+		{
+			retBytes[i] = (byte) (retBytes[i] & 0xFF);
+		}
+		
+		
+		
+		//Log.i(TAG,"retBytes = " + retBytes);
+		if (encoderOpend == true) {
+			SendMsgUart(1,retBytes);
+		}
+	}
 	
 	public class MyThread implements Runnable {
 
@@ -333,7 +521,32 @@ public class MainActivity extends Activity {
 					{
 						//StartCal();
 						//MainActivity.SendMsgUart(startNanoPan,2);
-					}			
+					}
+					else
+					{
+						if (encoderOpend == true) {
+							retStreamDatas = new ByteArrayOutputStream();
+							String[] sendStr = {"direction",sub};
+							direc.SetByte(sendStr);
+							try {
+								retStreamDatas = direc.GetAllByte();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							
+							
+							byte[] retBytes = retStreamDatas.toByteArray();
+							retStreamDatas.reset();
+							
+							for (int i =0;i<retBytes.length;i++)
+							{
+								retBytes[i] = (byte) (retBytes[i] & 0xFF);
+							}
+							
+							SendMsgUart(1,retBytes);
+						}
+					}
 				
 			   }
 	 }
@@ -413,21 +626,36 @@ public class MainActivity extends Activity {
 	}
 	
 	
+	public class EncoderThreadPool implements Runnable {
+
+		public void run() {
+
+			//Log.i(TAG, "EncoderThreadPool");
+			singleThreadExecutor.execute(rWEncoder);
+			singleThreadExecutor.execute(rREncoder);
+
+			handler.postDelayed(rEncoder, encoderWriteWiatInterval
+					+ encoderReadWaitInterval);
+		}
+
+	}
+	
 	public class EncoderWriteThread implements Runnable {
 
 		public void run() {
 
 			if (debugEncoderQueue) {
-				writeLock();
+				//writeLock();
 				//MainActivity.SendMsgUart("test",2,askEncoderData);
 				Log.i(TAG,"Write ask data");
-				writeUnLock();
-				handler.postDelayed(rWEncoder, encoderWriteInterval);
+				//writeUnLock();
+				//handler.postDelayed(rWEncoder, encoderWriteWiatInterval);
 			} else {
 				
 				//Log.i(TAG,"opend fd = " + uartCmd.GetDrivingOpend());
+
 				if (encoderOpend == true) {
-					writeLock();
+					//writeLock();
 					Log.i(TAG,"Send Ask to Driving board");
 					String ReStrEnco = null;
 					try {
@@ -436,11 +664,16 @@ public class MainActivity extends Activity {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					MainActivity.SendMsgUart(ReStrEnco,1,askEncoderData);
-					writeUnLock();
-				}
+					MainActivity.SendMsgUart(1,askEncoderData);
 
-				handler.postDelayed(rWEncoder, encoderWriteInterval);
+				}
+				try {
+					Thread.sleep(encoderWriteWiatInterval);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				//handler.postDelayed(rWEncoder, encoderWriteInterval);
 			}
 
 		}
@@ -449,11 +682,11 @@ public class MainActivity extends Activity {
 	
 	public class EncoderReadThread implements Runnable {
 
-		public void run() {
+		@TargetApi(Build.VERSION_CODES.GINGERBREAD) public void run() {
 
 			if (debugEncoderQueue) {
 				
-				readLock();
+				//readLock();
 				int dataSize = 8;
 				byte[] dataByte = new byte[dataSize];
 				
@@ -483,9 +716,9 @@ public class MainActivity extends Activity {
 				encoderQueue.add(dataByte);
 				encoderCount++;
 				
-				readUnLock();
+				//readUnLock();
 				
-				handler.postDelayed(rREncoder, encoderReadInterval);
+				//handler.postDelayed(rREncoder, encoderReadWaitInterval);
 
 				// byte[] encoderBy = ReceiveMsgUart(1);
 
@@ -502,47 +735,63 @@ public class MainActivity extends Activity {
 				
 				
 				//Log.i(TAG,"encoder fd = " + encoderOpend);
+
 				if (encoderOpend == true) {
 					
-					readLock();
+					//readLock();
 					//ReStrEnco = ReceiveMsgUart(1);
+					//Log.i(TAG,"encoder read running");
+					//while(true);
+					//handler.postDelayed(rREncoder, encoderReadInterval);
 
 					ReByteEnco = ReceiveByteMsgUart(1);
 
-					//Log.i(TAG,"receive msg = " + ReByteEnco);
 					
+				
 
-					if (ReByteEnco[0] != 0x01)
-					{
-
-						//Log.i(TAG,"Receive message = "+ ReStrEnco);
-						//encoderCmd.SetByte(ReStrEnco);
-						//byte [] test = encoderCmd.GetDataByte();
-						Log.i(TAG,"Encoder Receive test[0] = "+ReByteEnco[0] + "test1 = "+ ReByteEnco[1] + "test2 = "+ ReByteEnco[2]+ "test3 = "+ ReByteEnco[3]+ 
-								"test4 = "+ ReByteEnco[4] + "test5 = "+ ReByteEnco[5]);
-						// Add receive message from Driving Board
+						//Log.i(TAG,"encoder rec msg = " + ReByteEnco + " leng = " + ReByteEnco.length);
+						//for(int i=0;i<ReByteEnco.length;i++)
+						//	Log.i("wr","encoder data[ " + i + "] = " + ReByteEnco[i]);
+						if (  ReByteEnco.length  ==  11 && ReByteEnco[0] == 0x53 &&  ReByteEnco[1] == 0x0d)
+						{
+							
+							//Log.i(TAG,"Receive message = "+ ReStrEnco);
+							//encoderCmd.SetByte(ReStrEnco);
+							//byte [] test = encoderCmd.GetDataByte();
+							Log.i(TAG,"Encoder Receive test[0] = "+ReByteEnco[0] + "test1 = "+ ReByteEnco[1] + "test2 = "+ ReByteEnco[2]+ "test3 = "+ ReByteEnco[3]+ 
+									"test4 = "+ ReByteEnco[4] + "test5 = "+ ReByteEnco[5]);
+							//Log.i("123", "test6 = "+ ReByteEnco[6]);
+							// Add receive message from Driving Board
+							
+							encoderCmd.SetDataByte(ReByteEnco);
+							//byte [] test = encoderCmd.GetDataByte();
+							
+							encoderQueue.add(encoderCmd.GetDataByte());
+							
+							 
+							 //Log.i(TAG,"receive Data byte = " + Arrays.copyOfRange(ReByteEnco, 2, 10));
+							 //encoderQueue.add(Arrays.copyOfRange(ReByteEnco, 2, 10));
+							
+							//Log.i(TAG,"receive msg = " + ReStrEnco);
+	
+							// view.append(ReStr);
+							// scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+							// Arrays.fill(ReByteEnco, (byte)0x00);
+							// ReStrEnco = null;
+							
+							try {
+								Thread.sleep(encoderReadWaitInterval);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
 						
-						encoderCmd.SetDataByte(ReByteEnco);
-						byte [] test = encoderCmd.GetDataByte();
-						
-						encoderQueue.add(encoderCmd.GetDataByte());
-						
-						 
-						 //Log.i(TAG,"receive Data byte = " + Arrays.copyOfRange(ReByteEnco, 2, 10));
-						 //encoderQueue.add(Arrays.copyOfRange(ReByteEnco, 2, 10));
-						
-						//Log.i(TAG,"receive msg = " + ReStrEnco);
-
-						// view.append(ReStr);
-						// scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-						// Arrays.fill(ReByteEnco, (byte)0x00);
-						// ReStrEnco = null;
-					}
+						//readUnLock();
 					
-					readUnLock();
 				}
 
-				handler.postDelayed(rREncoder, encoderReadInterval);
+				//handler.postDelayed(rREncoder, encoderReadWaitInterval);
 			}
 
 		}
@@ -556,6 +805,9 @@ public class MainActivity extends Activity {
 
 			// Log.i(TAG,"encoderOpend = " + encoderOpend + "  nanoOpend = "
 			// + nanoOpend );
+			//Log.i(TAG, "nanoQueue.size() = " + nanoQueue.size()
+			//		+ " encoderQueue.size() = " + encoderQueue.size());
+			
 			if ( ( nanoOpend== true || debugNanoQueue == true) 
 					&& ( encoderOpend == true || debugEncoderQueue == true ) ) {
 				// byte[] beSendMsg = new byte[beSentMessage];;
@@ -585,13 +837,16 @@ public class MainActivity extends Activity {
 							encoderQueue.size() - getEncoderDataSize,
 							encoderQueue.size());
 
+
+					
+					
+					
 					// Calculate nanopan data and encoder data here (java
 					// layer).
-					// Output Data format 11 bytes 
-					// [0x53] [0x09] [X Polarity] [X2] [X1] [Y polarity] [Y2] [Y1] [CRC2] [CRC1] [0x45]
+					// Encoder data format
+					// [L Polarity] [L2] [L1] [R polarity] [R2] [R1] [COM2] [COM1] [0x45]
 					// Save to byte array beSendMsg[11]
 					// ....................
-
 					for (int i = 0; i < nanoData.size(); i++) {
 						nanoFloat = nanoData.get(i);
 						Log.i(TAG, "combine nanoFloat [" + i + " ] = "
@@ -603,13 +858,62 @@ public class MainActivity extends Activity {
 					int[] tempInt = new int[3]; // L Wheel , R Wheel , Compass
 					for (int i=0;i<encoderData.size();i++)
 					{
-						tempInt[0]  = ( (encoByte[0] << 8) & 0xff00 | (encoByte[1] & 0xff));
-						tempInt[1]  = ( (encoByte[2] << 8) & 0xff00 | (encoByte[3] & 0xff));
-						tempInt[2]  = ( (encoByte[4] << 8) & 0xff00 | (encoByte[5] & 0xff));
+						tempInt[0]  = ( (encoByte[1] << 8) & 0xff00 | (encoByte[2] & 0xff));
+						if (encoByte[0] == 2)
+							tempInt[0] = -tempInt[0];
+						
+						tempInt[1]  = ( (encoByte[4] << 8) & 0xff00 | (encoByte[5] & 0xff));
+						if (encoByte[3] == 2)
+							tempInt[1] = -tempInt[1];
+						
+						tempInt[2]  = ( (encoByte[6] << 8) & 0xff00 | (encoByte[7] & 0xff));
+						
+						
+						Log.i(TAG,"encoder data L=" + tempInt[0] + " R=" + tempInt[1] + " com = " + tempInt[2]);
 						
 						encoderDataQueue.add(tempInt);
 					}
 					
+					
+					
+					///////////////////////////////
+					
+					//StateEquation(ReByteEnco[3],ReByteEnco[5],0);
+					////////////////////////////////////////////////
+					VL=((((double)tempInt[0]/6)*piD)/dt);
+					VR=((((double)tempInt[1]/6)*piD)/dt);
+					
+					//VL=((((double)10/6)*piD)/dt);
+					//VR=((((double)-10/6)*piD)/dt);
+					
+					V=(VL+VR)/60;
+					W=(VR-VL)/22.26;//���ɰw���t�A�f�ɰw�����A�ثe�L�ϥ�
+
+					//�ثe���]��J���׬��ثe�����H��쨤
+					//d_theta=W*dt;
+					//�L���׿�J�A�ϥ�W���B���
+					d_theta=W*dt;
+					theta1=initial+d_theta;
+					initial=theta1;
+					//�����׿�J�A�ثe���״�쥻����
+					//d_theta=(double)ReByteEnco[6]-theta1;
+					//theta1+=d_theta;
+					cosine= Math.cos(d_theta*DegToRad);
+					sine= Math.sin(d_theta*DegToRad);
+
+					dX=(V*dt)*(cosine);
+					dY=(V*dt)*(sine);
+
+					X1=X0+dX;
+					Y1=Y0+dY;
+
+					X0=X1;
+					Y0=Y1;
+					////////////////////////////////////////////////
+					Log.i("123","X1="+X1+",Y1="+Y1);
+					
+					
+					///////////////////////////////
 					
 					
 					
@@ -625,11 +929,11 @@ public class MainActivity extends Activity {
 					// SendMsgUart(beSendMsg.toString(),1);
 				}
 
-				handler.postDelayed(rCombine, combineInterval);
+				
 			}
+			handler.postDelayed(rCombine, combineInterval);
 		}
 	}
- 
 	
 	
 	
@@ -698,51 +1002,7 @@ public class MainActivity extends Activity {
 		return fd;
 		
 	}
-	
-	
 
-	 
-	 public synchronized void readLock() {
-	    try {
-	        while(writingWriters > 0 || (writerFirst && waitingWriters > 0)) {
-	            wait();
-	        }
-	    }
-	    catch(InterruptedException e) {
-	        e.printStackTrace();
-	    }
-
-	    readingReaders++;
-	 }
-	 
-	 public synchronized void readUnLock() {
-	    readingReaders--;
-	    writerFirst = true;
-	    notifyAll();
-	 }
-	 
-	 public synchronized void writeLock() {
-	    waitingWriters++;
-	    try {
-	        while(readingReaders > 0 || writingWriters > 0) {
-	            wait();
-	        }
-	    }
-	    catch(InterruptedException e) {
-	        e.printStackTrace();
-	    }
-	    finally {
-	        waitingWriters--;
-	    }
-
-	    writingWriters++;
-	 }
-	 
-	 public synchronized void writeUnLock() {
-	    writingWriters--;
-	    writerFirst = false;
-	    notifyAll();
-	 } 
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -760,7 +1020,7 @@ public class MainActivity extends Activity {
 		return super.onOptionsItemSelected(item);
 	}
 	
-
+	
 	@Override
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
@@ -790,8 +1050,8 @@ public class MainActivity extends Activity {
 	public static native int OpenUart(String str, int fdNum);
 	public static native int CloseUart(int fdNum);
 	public static native int SetUart(int i , int fdNum);
-	public static native int SendMsgUart(String msg,int fdNum,byte[] inByte);
 	public static native int SendMsgUartNano(String msg);
+	public static native int SendMsgUart(int fdNum,byte[] inByte);
 	public static native String ReceiveMsgUart(int fdNum);
 	public static native byte[] ReceiveByteMsgUart(int fdNum);
 	public static native int StartCal();

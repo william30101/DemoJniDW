@@ -256,17 +256,16 @@ extern "C"
 			return -1;
 	}
 
-	JNIEXPORT jint JNICALL Native_SendMsgUart(JNIEnv *env,jobject mc, jstring str, jint fdnum , jbyteArray inByte)
+	JNIEXPORT jint JNICALL Native_SendMsgUart(JNIEnv *env,jobject mc,  jint fdnum , jbyteArray inByte)
 		{
 			int len;
 			jboolean isCopy;
-			const char *strBuf;
 
 			jbyte* a = env->GetByteArrayElements(inByte,&isCopy);
+			len = env->GetArrayLength(inByte);
 			char *buf = (char*)a;
 
-			strBuf = env->GetStringUTFChars(str, NULL);
-			len = env->GetStringLength(str);
+
 			if (fdnum == 1)
 			{
 
@@ -284,7 +283,6 @@ extern "C"
 			//LOGI("Write data 4 = %x",buf[4]);
 			//LOGI("Write data 5 = %x",buf[5]);
 
-			env->ReleaseStringUTFChars(str, strBuf);
 			env->ReleaseByteArrayElements(inByte, a, 0);
 		}
 
@@ -426,7 +424,7 @@ extern "C"
 		//Java Name			(Input Arg) return arg   JNI Name
 		{"ReceiveMsgUart",   "(I)Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
 		{"ReceiveByteMsgUart",   "(I)[B",(void *)Native_ReceiveByteMsgUart},
-		{"SendMsgUart",   "(Ljava/lang/String;I[B)I",  (void *)Native_SendMsgUart},
+		{"SendMsgUart",   "(I[B)I",  (void *)Native_SendMsgUart},
 		{"SendMsgUartNano",   "(Ljava/lang/String;)I",  (void *)Native_SendMsgUartNano},
 		{"SetUart",   "(II)I",   					(void *)Native_SetUart},
 		{"OpenUart",   "(Ljava/lang/String;I)I",   	(void *)Native_OpenUart},
