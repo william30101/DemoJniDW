@@ -54,7 +54,7 @@ public class MainActivity extends Activity {
 	
 
 	boolean debugNanoQueue = true;
-	boolean debugEncoderQueue = false;
+	boolean debugEncoderQueue = true;
 
 	private static String TAG = "App";
 	EditText dataText;
@@ -87,8 +87,11 @@ public class MainActivity extends Activity {
 	
 	private Handler handler = new Handler();
 	
-	private String nanoTestData[] = {"#-001.27:017:001:015","#-001.21:017:002:015",
-			"#-001.10:017:003:015"};
+	private String nanoTestData[] = {
+			"#-001.27:017:001:015","#-001.21:017:002:015","#-001.10:017:003:015",
+			"#-002.27:017:001:015","#-003.21:017:002:015","#-004.10:017:003:015",
+			"#-006.27:017:001:015","#-007.21:017:002:015"
+										};
 	private byte[] encoderTestData = {0x53,0x0d,(byte)0x02,0x30,0x03,0x15,0x01,(byte)0xff,0x00,0x00,0x45};
 	
 	private byte[] askEncoderData = {0x53,0x06,0x0d,0x00,0x00,0x45};
@@ -107,6 +110,7 @@ public class MainActivity extends Activity {
 	private ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
 	
 	float[] nanoFloat = new float[getNanoDataSize];
+	float[] nanoFloat_1 = new float[getNanoDataSize];
 	
 	public static int fd = 0,nanoFd = 0,driFd = 0;
 	
@@ -571,12 +575,15 @@ public class MainActivity extends Activity {
 				*/
 				
 				//String nanoStr = ReceiveMsgUart(2);
-				if (nanoCount  > 2)
+				if (nanoCount  > (nanoTestData.length - 1))
 					nanoCount = 0;
 					
 				String nanoStr = nanoTestData[nanoCount];
 				String[] daf = nanoStr.split(":");
-				float[] myflot = {Float.parseFloat(daf[0].substring(2, daf[0].length())),0};
+				float[] myflot = {Float.parseFloat(daf[2]),Float.parseFloat(daf[0].substring(2, daf[0].length()))};
+				
+				//Log.i(TAG,"anchor number = " + myflot[0] + "data = " + myflot[1]);
+				
 				//Get data : #-001.27:017:001:015
 				 
 				
@@ -606,7 +613,7 @@ public class MainActivity extends Activity {
 								String[] daf = line20[i].split(":");
 
 							
-								float[] myflot = {Float.parseFloat(daf[0].substring(2, daf[0].length())),0};
+								float[] myflot = {Float.parseFloat(daf[2]),Float.parseFloat(daf[0].substring(2, daf[0].length()))};
 								//Add receive message from nanopan
 								Log.i(TAG,"Nano my float distance = " + myflot[0]);
 								nanoQueue.add(myflot);
@@ -815,7 +822,7 @@ public class MainActivity extends Activity {
 				Log.i(TAG, "nanoQueue.size() = " + nanoQueue.size()
 						+ " encoderQueue.size() = " + encoderQueue.size());
 
-				if (nanoQueue.size() >= getNanoDataSize
+				if (nanoQueue.size() >= getNanoDataSize + 4
 						&& encoderQueue.size() >= getEncoderDataSize) {
 
 					// Arrays.fill(beSendMsg, (byte)0x00);
@@ -849,8 +856,10 @@ public class MainActivity extends Activity {
 					// ....................
 					for (int i = 0; i < nanoData.size(); i++) {
 						nanoFloat = nanoData.get(i);
+						nanoFloat_1[i]=nanoFloat[1];
 						Log.i(TAG, "combine nanoFloat [" + i + " ] = "
-								+ nanoFloat[0]);
+								+ nanoFloat_1[i]);
+						
 					}
 
 					ArrayList<int[]> encoderDataQueue = new ArrayList<int[]>();
@@ -887,19 +896,19 @@ public class MainActivity extends Activity {
 					//VR=((((double)-10/6)*piD)/dt);
 					
 					V=(VL+VR)/60;
-					W=(VR-VL)/22.26;//���ɰw���t�A�f�ɰw�����A�ثe�L�ϥ�
+					W=(VR-VL)/22.26;//嚙踝蕭嚙褕針嚙踝蕭嚙緣嚙璀嚙篆嚙褕針嚙踝蕭嚙踝蕭嚙璀嚙諍前嚙盤嚙誕伐蕭
 
-					//�ثe���]��J���׬��ثe�����H��쨤
+					//嚙諍前嚙踝蕭嚙稽嚙踝蕭J嚙踝蕭嚙論穿蕭嚙諍前嚙踝蕭嚙踝蕭嚙瘡嚙踝蕭鴩�
 					//d_theta=W*dt;
-					//�L���׿�J�A�ϥ�W���B���
+					//嚙盤嚙踝蕭嚙論選蕭J嚙璀嚙誕伐蕭W嚙踝蕭嚙畿嚙踝蕭嚙�
 					d_theta=W*dt;
 					theta1=initial+d_theta;
 					initial=theta1;
-					//�����׿�J�A�ثe���״�쥻����
+					//嚙踝蕭嚙踝蕭嚙論選蕭J嚙璀嚙諍前嚙踝蕭嚙論減掉嚙趣本嚙踝蕭嚙踝蕭
 					//d_theta=(double)ReByteEnco[6]-theta1;
 					//theta1+=d_theta;
-					cosine= Math.cos(d_theta*DegToRad);
-					sine= Math.sin(d_theta*DegToRad);
+					cosine= Math.cos(theta1*DegToRad);
+					sine= Math.sin(theta1*DegToRad);
 
 					dX=(V*dt)*(cosine);
 					dY=(V*dt)*(sine);
@@ -910,10 +919,18 @@ public class MainActivity extends Activity {
 					X0=X1;
 					Y0=Y1;
 					////////////////////////////////////////////////
-					Log.i("123","X1="+X1+",Y1="+Y1);
+					//Log.i("123","X1="+X1+",Y1="+Y1);
 					
 					
-					///////////////////////////////
+					//////////////////////////////////////////////////////
+					
+					
+					//Measurement equation/////////////////////////////////////////////////////
+					
+					//str=
+					NanopanRLS((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2]);
+					//Log.i("123","XYstr="+str);
+					//////////////////////////////////////////////////////////////////
 					
 					
 					
@@ -951,11 +968,28 @@ public class MainActivity extends Activity {
 	public static ArrayList<float[]> getNanoRange(ArrayList<float[]> list, int start, int last) {
 
 		ArrayList<float[]> temp = new ArrayList<float[]>();
-		Log.i(TAG,"start = " + start + " last = " + last);
+		
+		/*****************************************/
+		// example : arr{1,2,3,1,2,3,1,2}        //
+		// We need 2nd {1,2,3} , so we clear arraylist , and add newest
+		/*****************************************/
+		
+		for (int i=0;i< (list.size() / 3 );i++)
+		{
+			if (list.get(i*3)[0] == 1 && list.get(i*3 + 1)[0] == 2 && list.get(i*3 + 2)[0] == 3)
+			{
+				temp.clear();	// If we got newest data , clear old data .
+				temp.add(list.get(i*3));
+				temp.add(list.get(i*3 + 1));
+				temp.add(list.get(i*3 + 2));
+			}
+		}
+		
+		/*Log.i(TAG,"start = " + start + " last = " + last);
 		for (int x = start; x < last; x++) {
 			temp.add(list.get(x));
 			}
-
+		 */
 		return temp;
 	}
 
@@ -1056,4 +1090,5 @@ public class MainActivity extends Activity {
 	public static native byte[] ReceiveByteMsgUart(int fdNum);
 	public static native int StartCal();
 	public static native byte[] Combine(ArrayList<float[]> nanoq , ArrayList<int[]> encoq);
+	public static native void NanopanRLS(float anchor1,float anchor2,float anchor3);
 }

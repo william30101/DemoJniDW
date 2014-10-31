@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include "MyClient.h"
 #include "example.h"
+#include <math.h>
 
 #undef	TCSAFLUSH
 #define	TCSAFLUSH	TCSETSF
@@ -30,10 +31,23 @@ struct termios newtio, oldtio;
 static const char *classPathName = "com/example/demojni/MainActivity";
 #define LOG_TAG "hello"
 #define LOGI(fmt, args...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, fmt, ##args)
-#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
-#define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, fmt, ##args)
+#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, "234", fmt, ##args)
+#define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, "123", fmt, ##args)
 
-
+/////////////////////////////////////////////////////////////////
+int L,W,X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3;
+static float Tx=0,Ty=0,Tz=0;
+static float z1,z2,z3,a,b,c,d1,d2,d3;
+static float HX1,HY1,HX2,HY2,HX3,HY3;
+static float Z01[3][1];
+static float Z0[3][1];
+static float dZ[3][1];
+static float H[3][2]={{HX1,HY1},{HX2,HY2},{HX3,HY3}};
+static float HT[2][3],HTH[2][2],INVHTH[2][2],ANSH[2][3];
+static float dX[2][1];
+static float X01[2][1]={{Tx},{Ty}};
+static float X02[2][1];
+///////////////////////////////////////////////////////////////////
 using namespace android;
 
 extern "C"
@@ -56,8 +70,8 @@ extern "C"
 		jmethodID encoSizeMethodID = env->GetMethodID(encoClazz, "size", "()I");
 		int encoderSize = env->CallIntMethod(encodq, encoSizeMethodID);
 
-		LOGE("nanoQueue's size is : %d", nanoSize);
-		LOGE("encoderQueue's size is : %d", encoderSize);
+		//LOGE("nanoQueue's size is : %d", nanoSize);
+		//LOGE("encoderQueue's size is : %d", encoderSize);
 
 
 		//nanoFloatArray = env->NewFloatArray(nanoSize);
@@ -419,7 +433,116 @@ extern "C"
 
 		}
 
+	/////////////nanopan calculation///////////////////////////////////////
+	JNIEXPORT jfloat JNICALL Native_NanopanRLS(JNIEnv *env,jobject mc, jfloat anchor1,jfloat anchor2,jfloat anchor3)
+	{
 
+		//char *str;
+		int i,j,k,l;
+
+		X1=1.8,Y1=-1.55,Z1=0;
+		X2=-1.8,Y2=0,Z2=0;
+		X3=1.8,Y3=1.55,Z3=0;
+
+		//LOGD("A1=%.6f,A2=%.6f,A3=%.6f" ,anchor1,anchor2,anchor3);
+		for(l=0;l<5;l++)
+		{
+			memset(HTH,0, sizeof(int)*4);
+			memset(ANSH,0, sizeof(int)*6);
+			memset(dX,0, sizeof(int)*2);
+
+			d1=sqrt(pow(anchor1,2)- pow((Tz-Z1),2));
+			d2=sqrt(pow(anchor2,2)- pow((Tz-Z2),2));
+			d3=sqrt(pow(anchor3,2)- pow((Tz-Z3),2));
+
+			z1=sqrt(pow((Tx-X1),2)+pow((Ty-Y1),2));
+			z2=sqrt(pow((Tx-X2),2)+pow((Ty-Y2),2));
+			z3=sqrt(pow((Tx-X3),2)+pow((Ty-Y3),2));
+			//LOGD("Z1=%.6f,Z2=%.6f,Z2=%.6f" ,z1,z2,z3);
+
+			Z01[0][0]=z1;
+			Z01[1][0]=z2;
+			Z01[2][0]=z3;
+
+			Z0[0][0]=d1;
+			Z0[1][0]=d2;
+			Z0[2][0]=d3;
+
+			for (j=0;j<3;j++)
+					{
+							dZ[j][0] = Z01[j][0] - Z0[j][0];
+							//LOGD("dZ[%d]=%.6f",j,dZ[j][0]);
+					}
+
+			HX1=(Tx-X1)/z1,HY1=(Ty-Y1)/z1;
+			HX2=(Tx-X2)/z2,HY2=(Ty-Y2)/z2;
+			HX3=(Tx-X3)/z3,HY3=(Ty-Y3)/z3;
+			//LOGD("HX1=%.6f,HX2=%.6f,HX3=%.6f" ,HX1,HX2,HX3);
+
+			H[0][0]=HX1,H[0][1]=HY1;
+			H[1][0]=HX2,H[1][1]=HY2;
+			H[2][0]=HX3,H[2][1]=HY3;
+			//LOGD("H[0][0]=%.6f,H[0][1]=%.6f,H[1][0]=%.6f,H[1][1]=%.6f,H[2][0]=%.6f,H[2][1]=%.6f",H[0][0],H[0][1],H[1][0],H[1][1],H[2][0],H[2][1]);
+			HT[0][0]=HX1,HT[0][1]=HX2,HT[0][2]=HX3;
+			HT[1][0]=HY1,HT[1][1]=HY2,HT[1][2]=HY3;
+			//LOGD("HT[0][0]=%.6f,HT[0][1]=%.6f,HT[0][2]=%.6f,HT[1][0]=%.6f,HT[1][1]=%.6f,HT[1][2]=%.6f",H[0][0],H[0][1],H[0][2],H[1][0],HT[1][1],HT[1][2]);
+			for(i=0;i<2;i++){
+				for(j=0;j<2;j++){
+					for(k=0;k<3;k++){
+							HTH[i][j]=HTH[i][j]+(HT[i][k] * H[k][j]);
+					}
+							/*printf("%f ",HTH[i][j]);*/
+
+						/*printf("\n");*/
+			}
+
+								}
+			//LOGD("HTH[0][0]=%.6f,HTH[0][1]=%.6f,HTH[1][0]=%.6f,HTH[1][1]=%.6f",HTH[0][0],HTH[0][1],HTH[1][0],HTH[1][1]);
+			INVHTH[0][0]=HTH[1][1],INVHTH[0][1]=-(HTH[0][1]);
+			INVHTH[1][0]=-(HTH[1][0]),INVHTH[1][1]=HTH[0][0];
+
+
+
+			for(i=0;i<2;i++){
+				for(j=0;j<3;j++){
+					for(k=0;k<2;k++){
+							ANSH[i][j]=ANSH[i][j]+(INVHTH[i][k]*HT[k][j]);
+					}
+							//LOGE("ANSH=%.6f",ANSH[i][j]);
+							/*printf("%f ",ANSH[i][j]);*/
+				}
+						/*printf("\n");*/
+			}
+
+			for(i=0;i<2;i++){
+						for(j=0;j<1;j++){
+							for(k=0;k<3;k++){
+								dX[i][0]=dX[i][0]+(ANSH[i][k]*dZ[k][0]);
+							}
+								/*printf("%f ",dX[i][0]);*/
+						}
+						/*printf("\n");*/
+					}
+
+			for(i=0;i<2;i++){
+						X02[i][0]=X01[i][0]-dX[i][0];
+						//LOGD("dX=%.6f",dX[i][0]);
+					}
+
+			Tx=X02[0][0];
+			Ty=X02[1][0];
+
+			X01[0][0]=Tx;
+			X01[1][0]=Ty;
+
+		}
+		//LOGI("Tx=%.6f,Ty=%.6f",Tx,Ty);
+		LOGD("%.6f",Tx);
+		LOGE("%.6f",Ty);
+		//sprintf(str, "%.6f,%.6f",Tx,Ty);
+		//return str;
+	}
+	/////////////////////////////////////////////////////////////////////////////////
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
 		{"ReceiveMsgUart",   "(I)Ljava/lang/String;",(void *)Native_ReceiveMsgUart},
@@ -432,6 +555,7 @@ extern "C"
 		{"StartCal",   "()I",   	(void *)Native_StartCal},
 		{"CloseUart",   "(I)I",   	(void *)Native_CloseUart},
 		{"Combine",   "(Ljava/util/ArrayList;Ljava/util/ArrayList;)[B",   	(void *)Native_Combine},
+		{"NanopanRLS", "(FFF)V"	,(void *)Native_NanopanRLS},
 
 
 
