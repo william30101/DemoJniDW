@@ -39,22 +39,12 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.graphics.Color;
 
 public class MainActivity extends Activity {
 
-	
-	double D=11.83;
-	double pi=3.14;
-	double piD=(pi*D)/2,dt=0.2;
-	double X1,Y1,dX,dY;
-	double cosine,sine,VL,VR,V;
-	double W;
-	static double X0=0,Y0=0,initial=0,d_theta,theta1;
-	private double DegToRad = 3.141592653/180;
-	
-
-	boolean debugNanoQueue = true;
-	boolean debugEncoderQueue = true;
+	boolean debugNanoQueue = false;
+	boolean debugEncoderQueue = false;
 
 	private static String TAG = "App";
 	EditText dataText;
@@ -279,6 +269,7 @@ public class MainActivity extends Activity {
 	    				drivingStatus.setText("Driving mxc4 connected");
 	    			
 	    			if (OpenSetUartPort("ttymxc2") > 0)
+	    				
 	    				nanoStatus.setText("Nano mxc2 connected");
 	    			
 	    			/*
@@ -612,14 +603,26 @@ public class MainActivity extends Activity {
 							{
 								String[] daf = line20[i].split(":");
 
-							
-								float[] myflot = {Float.parseFloat(daf[2]),Float.parseFloat(daf[0].substring(2, daf[0].length()))};
-								//Add receive message from nanopan
-								Log.i(TAG,"Nano my float distance = " + myflot[0]);
-								nanoQueue.add(myflot);
-								//view.append(ReStr);
-								//scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-								ReStrNano = null;
+								if (daf.length == 4)
+								{
+									float[] myflot = {
+											Float.parseFloat(daf[2]),
+											Float.parseFloat(daf[0].substring(
+													2, daf[0].length())) };
+
+									
+									
+									// If data > 0 , we use it , else ignore it.
+									if (myflot[1] > 0) 				
+									{
+										Log.i(TAG, "Nano my float distance = "
+												+ myflot[1]);
+										nanoQueue.add(myflot);
+									}
+									// view.append(ReStr);
+									// scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+									ReStrNano = null;
+								}
 							}
 						}
 					}
@@ -755,7 +758,7 @@ public class MainActivity extends Activity {
 
 					
 				
-
+					//Log.i(TAG,"Length="+ReByteEnco.length+",0="+ ReByteEnco[0]+",1="+ReByteEnco[1]);
 						//Log.i(TAG,"encoder rec msg = " + ReByteEnco + " leng = " + ReByteEnco.length);
 						//for(int i=0;i<ReByteEnco.length;i++)
 						//	Log.i("wr","encoder data[ " + i + "] = " + ReByteEnco[i]);
@@ -883,59 +886,12 @@ public class MainActivity extends Activity {
 						encoderDataQueue.add(tempInt);
 					}
 					
+		///監看nanopan輸入值
+					Log.i(TAG,"Nano1=" + nanoFloat_1[0] + " Nano2=" + nanoFloat_1[1] + " Nano3= " + nanoFloat_1[2]);
+		///------EKF-----------------------------------------------------------------------------------------
+					EKF((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2],(int) tempInt[0],(int) tempInt[1],(int) tempInt[2]);
+		///--------------------------------------------------------------------------------------------------
 					
-					
-					///////////////////////////////
-					
-					//StateEquation(ReByteEnco[3],ReByteEnco[5],0);
-					////////////////////////////////////////////////
-					VL=((((double)tempInt[0]/6)*piD)/dt);
-					VR=((((double)tempInt[1]/6)*piD)/dt);
-					
-					//VL=((((double)10/6)*piD)/dt);
-					//VR=((((double)-10/6)*piD)/dt);
-					
-					V=(VL+VR)/60;
-					W=(VR-VL)/22.26;//嚙踝蕭嚙褕針嚙踝蕭嚙緣嚙璀嚙篆嚙褕針嚙踝蕭嚙踝蕭嚙璀嚙諍前嚙盤嚙誕伐蕭
-
-					//嚙諍前嚙踝蕭嚙稽嚙踝蕭J嚙踝蕭嚙論穿蕭嚙諍前嚙踝蕭嚙踝蕭嚙瘡嚙踝蕭鴩�
-					//d_theta=W*dt;
-					//嚙盤嚙踝蕭嚙論選蕭J嚙璀嚙誕伐蕭W嚙踝蕭嚙畿嚙踝蕭嚙�
-					d_theta=W*dt;
-					theta1=initial+d_theta;
-					initial=theta1;
-					//嚙踝蕭嚙踝蕭嚙論選蕭J嚙璀嚙諍前嚙踝蕭嚙論減掉嚙趣本嚙踝蕭嚙踝蕭
-					//d_theta=(double)ReByteEnco[6]-theta1;
-					//theta1+=d_theta;
-					cosine= Math.cos(theta1*DegToRad);
-					sine= Math.sin(theta1*DegToRad);
-
-					dX=(V*dt)*(cosine);
-					dY=(V*dt)*(sine);
-
-					X1=X0+dX;
-					Y1=Y0+dY;
-
-					X0=X1;
-					Y0=Y1;
-					////////////////////////////////////////////////
-					//Log.i("123","X1="+X1+",Y1="+Y1);
-					
-					
-					//////////////////////////////////////////////////////
-					
-					
-					//Measurement equation/////////////////////////////////////////////////////
-					
-					//str=
-					NanopanRLS((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2]);
-					//Log.i("123","XYstr="+str);
-					//////////////////////////////////////////////////////////////////
-					
-					
-					
-					Combine(nanoData, encoderDataQueue);
-					// .................
 
 					// End
 					encoderCount = 0;
@@ -1090,5 +1046,5 @@ public class MainActivity extends Activity {
 	public static native byte[] ReceiveByteMsgUart(int fdNum);
 	public static native int StartCal();
 	public static native byte[] Combine(ArrayList<float[]> nanoq , ArrayList<int[]> encoq);
-	public static native void NanopanRLS(float anchor1,float anchor2,float anchor3);
+	public static native void EKF(float a,float b,float c,int left,int right,int degree);
 }

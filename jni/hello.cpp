@@ -14,6 +14,7 @@
 #include "MyClient.h"
 #include "example.h"
 #include <math.h>
+#include <time.h>
 
 #undef	TCSAFLUSH
 #define	TCSAFLUSH	TCSETSF
@@ -21,6 +22,14 @@
 #define	_TERMIOS_H_
 #endif
 
+#define DegToRad 3.141592653/180
+#define D 11.836
+#define pi 3.14
+#define piD (11.83*3.14)/60
+#define dt 0.3
+
+#define LOWER   -0.5
+#define UPPER	0.5
 
 static int debugData = false;
 
@@ -35,24 +44,37 @@ static const char *classPathName = "com/example/demojni/MainActivity";
 #define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, "123", fmt, ##args)
 
 /////////////////////////////////////////////////////////////////
-int L,W,X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3;
-static float Tx=0,Ty=0,Tz=0;
+int X1=-2,Y1=0,Z1=0,X2=-2,Y2=0,Z2=0,X3=-2,Y3=0,Z3=0;
+int I[3][3]={{1,0,0},{0,1,0},{0,0,1}};
+static float Tx=1,Ty=1,Tz=0;
 static float z1,z2,z3,a,b,c,d1,d2,d3;
-static float HX1,HY1,HX2,HY2,HX3,HY3;
-static float Z01[3][1];
-static float Z0[3][1];
-static float dZ[3][1];
-static float H[3][2]={{HX1,HY1},{HX2,HY2},{HX3,HY3}};
-static float HT[2][3],HTH[2][2],INVHTH[2][2],ANSH[2][3];
-static float dX[2][1];
-static float X01[2][1]={{Tx},{Ty}};
-static float X02[2][1];
+static float HX1,HY1,HX2,HY2,HX3,HY3,HXA1,HYA1,HXB1,HYB1,HXC1,HYC1,HXA2,HYA2,HXB2,HYB2,HXC2,HYC2,HXA3,HYA3,HXB3,HYB3,HXC3,HYC3;
+static float Z01[3][1],Z0[3][1],dZ[3][1];
+static float H[3][8],HT[8][3];
+
+static float Kk[8][3],Pk_HkT[8][3],HkPk_HkT[3][3],HkPk_HkTR[3][3],InvHkPk_HkTR[3][6],AnsInvHkPk_HkTR[3][3];
+static float KkdZ[8][1],Xk[8][1];
+static float KkHk[8][8],KkHkPk_[8][8],Pk[8][8];
+
+static float Xk_[8][1]={{0},{0},{-2},{0},{-2},{0},{-2},{0}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
+static float Pk_[8][8]={{1,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0},{0,0,1,0,0,0,0,0},{0,0,0,1,0,0,0,0},{0,0,0,0,1,0,0,0},{0,0,0,0,0,1,0,0},{0,0,0,0,0,0,1,0},{0,0,0,0,0,0,0,1}};
+static float Q[8][8]={{0.1,0,0,0,0,0,0,0},{0,0.1,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
+static float R[3][3]={{0.25,0,0},{0,0.25,0},{0,0,0.25}};//modify the rate of measurement
+
+static float X,Y,dX,dY;
+static float cosine,sine,VL,VR,V,W;
+static float d_theta;
+static int initial,d,e,f,theta1;
+static int C=0;
 ///////////////////////////////////////////////////////////////////
 using namespace android;
+
+
 
 extern "C"
 {
 
+	//srand((unsigned)(time(NULL));encoderQueue.size
 	JNIEXPORT jbyteArray JNICALL Native_Combine(JNIEnv *env,jobject mc ,
 			jobject nanoq, jobject encodq)
 	{
@@ -216,7 +238,7 @@ extern "C"
 	JNIEXPORT jint JNICALL Native_SetUart(JNIEnv *env,jobject mc, jint i,jint fdnum)
 	{
 		int Baud_rate[] = { B19200, B115200};
-		LOGI("Native_SetUart %d", i);
+		LOGI("Native_SetUart = %d", i);
 
 		if (fdnum == 1)
 		{
@@ -237,7 +259,7 @@ extern "C"
 
 			if (tcsetattr(driveFd, TCSANOW, &newtio) < 0)
 			{
-				LOGE("tcsetattr2 fail !\n");
+				LOGE("tcsetattr2 driving fail !\n");
 				exit(1);
 			}
 
@@ -261,7 +283,7 @@ extern "C"
 
 				if (tcsetattr(nanoFd, TCSANOW, &newtio) < 0)
 				{
-					LOGE("tcsetattr2 fail !\n");
+					LOGE("tcsetattr2 nanoPan fail !\n");
 					exit(1);
 				}
 
@@ -433,115 +455,215 @@ extern "C"
 
 		}
 
-	/////////////nanopan calculation///////////////////////////////////////
-	JNIEXPORT jfloat JNICALL Native_NanopanRLS(JNIEnv *env,jobject mc, jfloat anchor1,jfloat anchor2,jfloat anchor3)
+	/*float get_rand(float lower,float upper)
 	{
-
-		//char *str;
+		srand(time(NULL));
+		return rand() * (upper-lower) / (RAND_MAX + 1.0) + lower;
+	}*/
+	///------EKF calculation--------------------------------------------------------------------------
+	JNIEXPORT jfloat JNICALL Native_EKF(JNIEnv *env,jobject mc,jfloat a,jfloat b,jfloat c,jint left,jint right,jint degree)
+	{
+		FILE *fp = NULL;
 		int i,j,k,l;
-
-		X1=1.8,Y1=-1.55,Z1=0;
-		X2=-1.8,Y2=0,Z2=0;
-		X3=1.8,Y3=1.55,Z3=0;
-
-		//LOGD("A1=%.6f,A2=%.6f,A3=%.6f" ,anchor1,anchor2,anchor3);
-		for(l=0;l<5;l++)
-		{
-			memset(HTH,0, sizeof(int)*4);
-			memset(ANSH,0, sizeof(int)*6);
-			memset(dX,0, sizeof(int)*2);
-
-			d1=sqrt(pow(anchor1,2)- pow((Tz-Z1),2));
-			d2=sqrt(pow(anchor2,2)- pow((Tz-Z2),2));
-			d3=sqrt(pow(anchor3,2)- pow((Tz-Z3),2));
-
-			z1=sqrt(pow((Tx-X1),2)+pow((Ty-Y1),2));
-			z2=sqrt(pow((Tx-X2),2)+pow((Ty-Y2),2));
-			z3=sqrt(pow((Tx-X3),2)+pow((Ty-Y3),2));
-			//LOGD("Z1=%.6f,Z2=%.6f,Z2=%.6f" ,z1,z2,z3);
-
-			Z01[0][0]=z1;
-			Z01[1][0]=z2;
-			Z01[2][0]=z3;
-
-			Z0[0][0]=d1;
-			Z0[1][0]=d2;
-			Z0[2][0]=d3;
-
-			for (j=0;j<3;j++)
-					{
-							dZ[j][0] = Z01[j][0] - Z0[j][0];
-							//LOGD("dZ[%d]=%.6f",j,dZ[j][0]);
-					}
-
-			HX1=(Tx-X1)/z1,HY1=(Ty-Y1)/z1;
-			HX2=(Tx-X2)/z2,HY2=(Ty-Y2)/z2;
-			HX3=(Tx-X3)/z3,HY3=(Ty-Y3)/z3;
-			//LOGD("HX1=%.6f,HX2=%.6f,HX3=%.6f" ,HX1,HX2,HX3);
-
-			H[0][0]=HX1,H[0][1]=HY1;
-			H[1][0]=HX2,H[1][1]=HY2;
-			H[2][0]=HX3,H[2][1]=HY3;
-			//LOGD("H[0][0]=%.6f,H[0][1]=%.6f,H[1][0]=%.6f,H[1][1]=%.6f,H[2][0]=%.6f,H[2][1]=%.6f",H[0][0],H[0][1],H[1][0],H[1][1],H[2][0],H[2][1]);
-			HT[0][0]=HX1,HT[0][1]=HX2,HT[0][2]=HX3;
-			HT[1][0]=HY1,HT[1][1]=HY2,HT[1][2]=HY3;
-			//LOGD("HT[0][0]=%.6f,HT[0][1]=%.6f,HT[0][2]=%.6f,HT[1][0]=%.6f,HT[1][1]=%.6f,HT[1][2]=%.6f",H[0][0],H[0][1],H[0][2],H[1][0],HT[1][1],HT[1][2]);
-			for(i=0;i<2;i++){
-				for(j=0;j<2;j++){
-					for(k=0;k<3;k++){
-							HTH[i][j]=HTH[i][j]+(HT[i][k] * H[k][j]);
-					}
-							/*printf("%f ",HTH[i][j]);*/
-
-						/*printf("\n");*/
-			}
-
-								}
-			//LOGD("HTH[0][0]=%.6f,HTH[0][1]=%.6f,HTH[1][0]=%.6f,HTH[1][1]=%.6f",HTH[0][0],HTH[0][1],HTH[1][0],HTH[1][1]);
-			INVHTH[0][0]=HTH[1][1],INVHTH[0][1]=-(HTH[0][1]);
-			INVHTH[1][0]=-(HTH[1][0]),INVHTH[1][1]=HTH[0][0];
-
-
-
-			for(i=0;i<2;i++){
-				for(j=0;j<3;j++){
-					for(k=0;k<2;k++){
-							ANSH[i][j]=ANSH[i][j]+(INVHTH[i][k]*HT[k][j]);
-					}
-							//LOGE("ANSH=%.6f",ANSH[i][j]);
-							/*printf("%f ",ANSH[i][j]);*/
+				if (C==0){
+				initial=degree;
 				}
-						/*printf("\n");*/
-			}
 
-			for(i=0;i<2;i++){
-						for(j=0;j<1;j++){
-							for(k=0;k<3;k++){
-								dX[i][0]=dX[i][0]+(ANSH[i][k]*dZ[k][0]);
+				memset(Pk_HkT,0, sizeof(int)*24);
+				memset(HkPk_HkT,0, sizeof(int)*9);
+				memset(Kk,0, sizeof(int)*24);
+				memset(KkdZ,0, sizeof(int)*8);
+				memset(KkHk,0, sizeof(int)*64);
+				memset(KkHkPk_,0, sizeof(int)*64);
+
+				d1=sqrt(pow(a,2)- pow((Tz-Z1),2));
+				d2=sqrt(pow(b,2)- pow((Tz-Z2),2));
+				d3=sqrt(pow(c,2)- pow((Tz-Z3),2));
+
+				z1=sqrt(pow((Xk_[0][0]-Xk_[2][0]),2)+pow((Xk_[1][0]-Xk_[3][0]),2));// + get_rand(LOWER, UPPER);
+				z2=sqrt(pow((Xk_[0][0]-Xk_[4][0]),2)+pow((Xk_[1][0]-Xk_[5][0]),2));// + get_rand(LOWER, UPPER);
+				z3=sqrt(pow((Xk_[0][0]-Xk_[6][0]),2)+pow((Xk_[1][0]-Xk_[7][0]),2));// + get_rand(LOWER, UPPER);
+
+				Z01[0][0]=z1;
+				Z01[1][0]=z2;
+				Z01[2][0]=z3;
+
+				Z0[0][0]=d1;
+				Z0[1][0]=d2;
+				Z0[2][0]=d3;
+
+				for (j=0;j<3;j++){
+					dZ[j][0] = Z0[j][0] - Z01[j][0];
+				}
+
+				HX1=(Xk_[0][0]-Xk_[2][0])/z1,HY1=(Xk_[1][0]-Xk_[3][0])/z1,HXA1=-(Xk_[0][0]-Xk_[2][0])/z1,HYA1=-(Xk_[1][0]-Xk_[3][0])/z1,HXB1=0,HYB1=0,HXC1=0,HYC1=0;
+				HX2=(Xk_[0][0]-Xk_[4][0])/z2,HY2=(Xk_[1][0]-Xk_[5][0])/z2,HXA2=0,HYA2=0,HXB2=-(Xk_[0][0]-Xk_[4][0])/z2,HYB2=-(Xk_[1][0]-Xk_[5][0])/z2,HXC2=0,HYC2=0;
+				HX3=(Xk_[0][0]-Xk_[6][0])/z3,HY3=(Xk_[1][0]-Xk_[7][0])/z3,HXA3=0,HYA3=0,HXB3=0,HYB3=0,HXC3=-(Xk_[0][0]-Xk_[6][0])/z3,HYC3=-(Xk_[1][0]-Xk_[7][0])/z3;
+
+				H[0][0]=HX1,H[0][1]=HY1,H[0][2]=HXA1,H[0][3]=HYA1,H[0][4]=HXB1,H[0][5]=HYB1,H[0][6]=HXC1,H[0][7]=HYC1;
+				H[1][0]=HX2,H[1][1]=HY2,H[1][2]=HXA2,H[1][3]=HYA2,H[1][4]=HXB2,H[1][5]=HYB2,H[1][6]=HXC2,H[1][7]=HYC2;
+				H[2][0]=HX3,H[2][1]=HY3,H[2][2]=HXA3,H[2][3]=HYA3,H[2][4]=HXB3,H[2][5]=HYB3,H[2][6]=HXC3,H[2][7]=HYC3;
+
+				for(i=0;i<8;i++){
+							for(j=0;j<3;j++){
+								HT[i][j]=H[j][i];
 							}
-								/*printf("%f ",dX[i][0]);*/
+				}
+		///-----Compute the Kalman Gain----------------------------------------------------
+				for(i=0;i<8;i++){
+							for(j=0;j<3;j++){
+								for(k=0;k<8;k++){
+								Pk_HkT[i][j]=Pk_HkT[i][j]+(Pk_[i][k]*HT[k][j]);
+								}
+							}
+				}
+
+				for(i=0;i<3;i++){
+							for(j=0;j<3;j++){
+								for(k=0;k<8;k++){
+									HkPk_HkT[i][j]=HkPk_HkT[i][j]+(H[i][k]*Pk_HkT[k][j]);
+								}
+							}
+				}
+
+				for(i=0;i<3;i++){
+							for(j=0;j<3;j++){
+								HkPk_HkTR[i][j]=HkPk_HkT[i][j]+R[i][j];
+							}
+				}
+		///----�X�W�x�}----------------------------------------------------------------------------------------
+				for(i=0;i<3;i++){
+							for(j=0;j<3;j++){
+								InvHkPk_HkTR[i][j]=HkPk_HkTR[i][j];
+								InvHkPk_HkTR[i][j+3]=I[i][j];
+							}
 						}
-						/*printf("\n");*/
+		///----Inverse Matrix Calculation------------------------------------------------------------------
+				for(i=0;i<3;i++){
+							X=InvHkPk_HkTR[i][i];
+							for(j=0;j<6;j++){
+							InvHkPk_HkTR[i][j]=InvHkPk_HkTR[i][j]/X;
+							}
+
+							for(k=0;k<3;k++){
+								if(k!=i){
+									Y=InvHkPk_HkTR[k][i];
+									for(l=0;l<6;l++){
+									InvHkPk_HkTR[k][l]=-(Y*InvHkPk_HkTR[i][l])+InvHkPk_HkTR[k][l];
+									}
+								}
+							}
+						}
+		///-----Get Inverse Matrix and Calculate the Kalman Gain--------------------------------------------------------------------------------------
+				for(i=0;i<3;i++){
+							for(j=3;j<6;j++){
+							AnsInvHkPk_HkTR[i][j-3]=InvHkPk_HkTR[i][j];
+							}
+				}
+
+				for(i=0;i<8;i++){
+							for(j=0;j<3;j++){
+								for(k=0;k<3;k++){
+									Kk[i][j]=Kk[i][j]+(Pk_HkT[i][k]*AnsInvHkPk_HkTR[k][j]);
+								}
+							}
+				}
+		///-----Update estimate with measurement zk--------------------------------------------------------
+				for(i=0;i<8;i++){
+							for(j=0;j<3;j++){
+								KkdZ[i][0]=KkdZ[i][0]+(Kk[i][j]*dZ[j][0]);
+							}
+						}
+				for(i=0;i<8;i++){
+							Xk[i][0]=Xk_[i][0]+KkdZ[i][0];
+				}
+				LOGD("Xk0=%.3f",Xk[0][0]);
+				LOGE("Xk1=%.3f",Xk[1][0]);
+
+				//fp = fopen("/sdcard/data2.txt","a");
+				//fprintf(fp,"Xk=%.4f,Yk=%.4f\n",Xk[0][0],Xk[1][0]);
+				//fprintf(fp,"left=%d,right=%d,compass=%d\n",left,right,degree);
+				//fclose(fp);
+				//fp = NULL;
+
+		///-----Update Error Covariance----------------------------------------------------------------------
+				for(i=0;i<8;i++){
+							for(j=0;j<3;j++){
+								for(k=0;k<8;k++){
+									KkHk[i][k]=KkHk[i][k]+(Kk[i][j]*H[j][k]);
+								}
+							}
+						}
+
+				for(i=0;i<8;i++){
+							for(j=0;j<8;j++){
+								KkHkPk_[i][j]=KkHkPk_[i][j]+(KkHk[i][j]*Pk_[i][j]);
+							}
+						}
+
+				for(i=0;i<8;i++){
+							for(j=0;j<8;j++){
+								Pk[i][j]=Pk_[i][j]-KkHkPk_[i][j];
+							}
+				}
+
+		///------State equation------------------------------------------------------------------------------
+				VL=((((float)left/6)*piD)/dt);
+				VR=((((float)right/6)*piD)/dt);
+
+				V=(VL+VR)/2;
+
+				if (degree-initial<0){
+					if(initial-degree>180){
+						theta1=(degree-initial)+360;
 					}
-
-			for(i=0;i<2;i++){
-						X02[i][0]=X01[i][0]-dX[i][0];
-						//LOGD("dX=%.6f",dX[i][0]);
+					else{
+						theta1=degree-initial;
 					}
+				}
+				else{
+					if(degree-initial>180){
+						theta1=(degree-initial)-360;
+					}
+					else
+						theta1=degree-initial;
+				}
+				//theta1=-(theta1);
+				//theta1=degree-initial;
 
-			Tx=X02[0][0];
-			Ty=X02[1][0];
+				cosine = cos(theta1*DegToRad);
+				sine = sin(theta1*DegToRad);
 
-			X01[0][0]=Tx;
-			X01[1][0]=Ty;
+				dX = (V*dt)*(cosine);
+				dY = (V*dt)*(sine);
+				//LOGD("dX = %.2f",dX);
+				//LOGE("dY = %.2f",dY);
+				Xk_[0][0] = Xk[0][0]+(dX/100);//�N�첾�q���⦨����
+				Xk_[1][0] = Xk[1][0]+(dY/100);
+				Xk_[2][0] = Xk[2][0];
+				Xk_[3][0] = Xk[3][0];
+				Xk_[4][0] = Xk[4][0];
+				Xk_[5][0] = Xk[5][0];
+				Xk_[6][0] = Xk[6][0];
+				Xk_[7][0] = Xk[7][0];
+				//fprintf(fp,"%d,%d,%d\n",theta1,degree,initial);
+				//fprintf(fp,"dX=%.4f,dY=%.4f\n",dX,dY);
+				//fprintf(fp,"%.4f,%.4f\n",Xk_[0][0],Xk_[1][0]);
+				//fclose(fp);
+				//fp = NULL;
+				LOGD("Xk_0=%.3f",Xk_[0][0]);
+				LOGE("Xk_1=%.3f",Xk_[1][0]);
+		///-----Error covarinace----------------------------------------------------------------------------
+				for(i=0;i<8;i++){
+							for(j=0;j<8;j++){
+								Pk_[i][j]=Pk[i][j]+Q[i][j];
+							}
+				}
+				C=1;
 
-		}
-		//LOGI("Tx=%.6f,Ty=%.6f",Tx,Ty);
-		LOGD("%.6f",Tx);
-		LOGE("%.6f",Ty);
-		//sprintf(str, "%.6f,%.6f",Tx,Ty);
-		//return str;
 	}
+
+
 	/////////////////////////////////////////////////////////////////////////////////
 	static JNINativeMethod gMethods[] = {
 		//Java Name			(Input Arg) return arg   JNI Name
@@ -555,7 +677,7 @@ extern "C"
 		{"StartCal",   "()I",   	(void *)Native_StartCal},
 		{"CloseUart",   "(I)I",   	(void *)Native_CloseUart},
 		{"Combine",   "(Ljava/util/ArrayList;Ljava/util/ArrayList;)[B",   	(void *)Native_Combine},
-		{"NanopanRLS", "(FFF)V"	,(void *)Native_NanopanRLS},
+		{"EKF", "(FFFIII)V"	,(void *)Native_EKF},
 
 
 
