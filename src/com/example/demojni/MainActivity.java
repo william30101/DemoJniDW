@@ -44,7 +44,7 @@ import android.graphics.Color;
 public class MainActivity extends Activity {
 
 	boolean debugNanoQueue = false;
-	boolean debugEncoderQueue = false;
+	boolean debugEncoderQueue = true;
 
 	private static String TAG = "App";
 	EditText dataText;
@@ -118,6 +118,11 @@ public class MainActivity extends Activity {
 	
 	ByteArrayOutputStream retStreamDatas;
 	
+	// For Draw point
+	DrawView drawView;
+
+	// End for Draw Point
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -143,6 +148,9 @@ public class MainActivity extends Activity {
 		
 		drivingStatus = (TextView) findViewById(R.id.drivingStatusText);
 		nanoStatus = (TextView) findViewById(R.id.nanoStatusText);
+		
+		drawView = (DrawView) findViewById(R.id.drawView1);
+		
 		//Open uart when App lunch
 		
 		if (OpenSetUartPort("ttymxc4") > 0)
@@ -272,6 +280,10 @@ public class MainActivity extends Activity {
 	    				
 	    				nanoStatus.setText("Nano mxc2 connected");
 	    			
+	    			//float test[] = floatTest();
+	    			
+	    			//Log.i(TAG,"find float test[0] = " + test[0] + " test[1] = " + test[1]);
+	    			
 	    			/*
 	    			fd = MainActivity.OpenUart("ttymxc0",2);
 
@@ -311,16 +323,16 @@ public class MainActivity extends Activity {
 	    		case R.id.thrbtn : 
 	    				handler.postDelayed(rNano, 100);
     				
-	                   //	new Thread(rnano).start();
+//	                   	new Thread(rNano).start();
 	                   	//Start encoder thread
-	    				//Runnable rencoder = new EncoderThread();
-	                   	//new Thread(rencoder).start();
-	                   //handler.postDelayed(rWEncoder, encoderWriteInterval);
-	                   // handler.postDelayed(rREncoder, encoderReadInterval);
+//	    				Runnable rencoder = new EncoderThread();
+//	                   	new Thread(rencoder).start();
+//	                    handler.postDelayed(rWEncoder, encoderWriteInterval);
+//	                    handler.postDelayed(rREncoder, encoderReadInterval);
 	                   	
 	                   	//Start Combine Thread
-	                   	//Runnable rcombind = new CombineThread();
-	                   	//new Thread(rcombind).start();
+//	                   	Runnable rcombind = new CombineThread();
+//	                   	new Thread(rcombind).start();
 
 
 	    				
@@ -889,10 +901,23 @@ public class MainActivity extends Activity {
 		///監看nanopan輸入值
 					Log.i(TAG,"Nano1=" + nanoFloat_1[0] + " Nano2=" + nanoFloat_1[1] + " Nano3= " + nanoFloat_1[2]);
 		///------EKF-----------------------------------------------------------------------------------------
-					EKF((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2],(int) tempInt[0],(int) tempInt[1],(int) tempInt[2]);
+					float robotLocation[] = EKF((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2],(int) tempInt[0],(int) tempInt[1],(int) tempInt[2]);
 		///--------------------------------------------------------------------------------------------------
+					Point point = new Point();
+					point.x = robotLocation[0];
+					point.y = robotLocation[1];
 					
-
+					//for test
+					//point.x = 200;
+					//point.y = 300;
+					drawView.points.add(point);
+					drawView.postInvalidate();
+					
+					try {
+						Thread.sleep(50);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
 					// End
 					encoderCount = 0;
 					nanoCount = 0;
@@ -1046,5 +1071,6 @@ public class MainActivity extends Activity {
 	public static native byte[] ReceiveByteMsgUart(int fdNum);
 	public static native int StartCal();
 	public static native byte[] Combine(ArrayList<float[]> nanoq , ArrayList<int[]> encoq);
-	public static native void EKF(float a,float b,float c,int left,int right,int degree);
+	public static native float[] floatTest();
+	public static native float[] EKF(float a,float b,float c,int left,int right,int degree);
 }

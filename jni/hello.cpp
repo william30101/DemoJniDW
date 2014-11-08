@@ -56,9 +56,9 @@ static float Kk[8][3],Pk_HkT[8][3],HkPk_HkT[3][3],HkPk_HkTR[3][3],InvHkPk_HkTR[3
 static float KkdZ[8][1],Xk[8][1];
 static float KkHk[8][8],KkHkPk_[8][8],Pk[8][8];
 
-static float Xk_[8][1]={{0},{0},{-2},{0},{-2},{0},{-2},{0}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
+static float Xk_[8][1]={{190-50},{114-50},{190},{214*3},{325*3},{225},{325},{114}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
 static float Pk_[8][8]={{1,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0},{0,0,1,0,0,0,0,0},{0,0,0,1,0,0,0,0},{0,0,0,0,1,0,0,0},{0,0,0,0,0,1,0,0},{0,0,0,0,0,0,1,0},{0,0,0,0,0,0,0,1}};
-static float Q[8][8]={{0.1,0,0,0,0,0,0,0},{0,0.1,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
+static float Q[8][8]={{0.9,0,0,0,0,0,0,0},{0,0.9,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
 static float R[3][3]={{0.25,0,0},{0,0.25,0},{0,0,0.25}};//modify the rate of measurement
 
 static float X,Y,dX,dY;
@@ -66,6 +66,8 @@ static float cosine,sine,VL,VR,V,W;
 static float d_theta;
 static int initial,d,e,f,theta1;
 static int C=0;
+
+
 ///////////////////////////////////////////////////////////////////
 using namespace android;
 
@@ -460,10 +462,28 @@ extern "C"
 		srand(time(NULL));
 		return rand() * (upper-lower) / (RAND_MAX + 1.0) + lower;
 	}*/
+
+
+
+	JNIEXPORT jfloatArray JNICALL Native_floatTest(JNIEnv *env,jobject mc)
+	{
+		jfloatArray result;
+		float RobotLocation[] = { 1.0 , 2.0};
+		result = env->NewFloatArray(2); // Store X , Y data
+
+		env->SetFloatArrayRegion(result, 0, 2, RobotLocation);
+
+		return result;
+	}
+
 	///------EKF calculation--------------------------------------------------------------------------
-	JNIEXPORT jfloat JNICALL Native_EKF(JNIEnv *env,jobject mc,jfloat a,jfloat b,jfloat c,jint left,jint right,jint degree)
+	JNIEXPORT jfloatArray JNICALL Native_EKF(JNIEnv *env,jobject mc,jfloat a,jfloat b,jfloat c,jint left,jint right,jint degree)
 	{
 		FILE *fp = NULL;
+		jfloatArray result;
+		float RobotLocation[2];
+		result = env->NewFloatArray(2); // Store X , Y data
+
 		int i,j,k,l;
 				if (C==0){
 				initial=degree;
@@ -653,6 +673,12 @@ extern "C"
 				//fp = NULL;
 				LOGD("Xk_0=%.3f",Xk_[0][0]);
 				LOGE("Xk_1=%.3f",Xk_[1][0]);
+
+				RobotLocation[0] = Xk_[0][0];
+				RobotLocation[1] = Xk_[1][0];
+
+				env->SetFloatArrayRegion(result, 0, 2, RobotLocation);
+
 		///-----Error covarinace----------------------------------------------------------------------------
 				for(i=0;i<8;i++){
 							for(j=0;j<8;j++){
@@ -661,6 +687,7 @@ extern "C"
 				}
 				C=1;
 
+				return result;
 	}
 
 
@@ -677,7 +704,8 @@ extern "C"
 		{"StartCal",   "()I",   	(void *)Native_StartCal},
 		{"CloseUart",   "(I)I",   	(void *)Native_CloseUart},
 		{"Combine",   "(Ljava/util/ArrayList;Ljava/util/ArrayList;)[B",   	(void *)Native_Combine},
-		{"EKF", "(FFFIII)V"	,(void *)Native_EKF},
+		{"EKF", "(FFFIII)[F"	,(void *)Native_EKF},
+		{"floatTest", "()[F"	,(void *)Native_floatTest},
 
 
 
