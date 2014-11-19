@@ -4,11 +4,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
-
-import android.util.Log;
+//import android.util.Log;
 
 public class EncoderCmd  extends BaseCmd{
-private String TAG = "AxisCmd";
+//private String TAG = "AxisCmd";
 	
 	private byte funcByte = (byte) 0x0d;
 	private int dataSize = 8;
@@ -37,7 +36,6 @@ private String TAG = "AxisCmd";
 		try {
 			allDataByte = inStr.getBytes("ISO-8859-1");
 		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 

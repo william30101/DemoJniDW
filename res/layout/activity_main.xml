@@ -227,4 +227,50 @@
         android:layout_alignLeft="@+id/nanoStatusText"
         android:text="Driving mxc4 Disconnect" />
 
+    <TextView
+        android:id="@+id/XCoordinatetextOriginal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignRight="@+id/thrbtn"
+        android:layout_below="@+id/angleBottom"
+        android:text="Large Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/YCoordinatetextOriginal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/XCoordinatetextOriginal"
+        android:layout_alignTop="@+id/XCoordinatetext"
+        android:layout_marginTop="12dp"
+        android:text="Large Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/XCoordinatetext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/angleBottom"
+        android:layout_below="@+id/XCoordinatetextOriginal"
+        android:text="Large Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/YCoordinatetext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/XCoordinatetextOriginal"
+        android:layout_toRightOf="@+id/textView2"
+        android:text="Large Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <Button
+        android:id="@+id/setCorBtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/YCoordinatetext"
+        android:layout_alignBottom="@+id/YCoordinatetext"
+        android:layout_alignParentRight="true"
+        android:text="setCor" />
+
 </RelativeLayout>

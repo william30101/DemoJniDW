@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,16 +40,22 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PathMeasure;
+import android.graphics.Paint.Style;
 
 public class MainActivity extends Activity {
 
 	boolean debugNanoQueue = false;
-	boolean debugEncoderQueue = true;
+	boolean debugEncoderQueue = false;
 
+	boolean setCornerStatus = false;
 	private static String TAG = "App";
 	EditText dataText;
-	TextView drivingStatus,nanoStatus;
+	TextView drivingStatus,nanoStatus,xCoordinate,yCoordinate,xCoordinateOri,yCoordinateOri;
 	Button writeBtn,writeFileBtn,startCalBtn,uartBtn,uartReadBtn,uartWriteBtn,thrBtn;
 	private int[] wnum;
 	File sdcard,file;
@@ -58,6 +65,17 @@ public class MainActivity extends Activity {
 	final Timer timer = new Timer();
 	private boolean Uart_Check = false,nanoOpend = false, encoderOpend = false;
 	String ReStr,ReStrEnco,ReStrNano;
+	
+	Paint paint = new Paint();
+	Path path=new Path();
+	Canvas canvas;
+	
+	float test = 3;
+	float firsttouchX;
+	float firsttouchY;
+	float current_TouchX;
+	float current_TouchY;
+	int count = 0;
 
 	//byte[] ReByteEnco = new byte[11];
 	byte[] ReByteNano = new byte[50];
@@ -82,7 +100,8 @@ public class MainActivity extends Activity {
 			"#-002.27:017:001:015","#-003.21:017:002:015","#-004.10:017:003:015",
 			"#-006.27:017:001:015","#-007.21:017:002:015"
 										};
-	private byte[] encoderTestData = {0x53,0x0d,(byte)0x02,0x30,0x03,0x15,0x01,(byte)0xff,0x00,0x00,0x45};
+	private byte[] encoderTestData = {0x53,0x0d,(byte)0x01,0x30,0x03,0x1,0x010,(byte)0xff,0x00,0x00,0x45};
+	private byte[] encoderTestData2 = {0x53,0x0d,(byte)0x01,0x50,0x03,0x1,0x01,(byte)0xff,0x00,0x00,0x45};
 	
 	private byte[] askEncoderData = {0x53,0x06,0x0d,0x00,0x00,0x45};
 	
@@ -104,7 +123,7 @@ public class MainActivity extends Activity {
 	
 	public static int fd = 0,nanoFd = 0,driFd = 0;
 	
-	private boolean writerFirst = true; // Write First
+	private boolean writerFirst = true , encoderDataChange = false; // Write First
 	private static int writingWriters = 0;
 	private static int waitingWriters = 0;
 	private static int readingReaders = 0;
@@ -122,6 +141,10 @@ public class MainActivity extends Activity {
 	DrawView drawView;
 
 	// End for Draw Point
+	
+	PathMeasure mPathMeasure;
+	
+	FindCornerAlgorithm findAlgo = new FindCornerAlgorithm();
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -179,6 +202,8 @@ public class MainActivity extends Activity {
 		Button axisBtn = (Button) findViewById(R.id.axisBtn);
 
 		Button askBtn = (Button) findViewById(R.id.askBtn);
+		
+		Button setCorBtn = (Button) findViewById(R.id.setCorBtn);
 
 		backward.setOnClickListener(ClickListener);
 		forward.setOnClickListener(ClickListener);
@@ -196,9 +221,16 @@ public class MainActivity extends Activity {
 		stretchBottom.setOnClickListener(ClickListener);
 		stretchTop.setOnClickListener(ClickListener);
 
+		setCorBtn.setOnClickListener(ClickListener);
 		
 		nanoStatus = (TextView) findViewById(R.id.nanoStatusText);
 		drivingStatus = (TextView) findViewById(R.id.drivingStatusText);
+		
+		xCoordinate = (TextView) findViewById(R.id.XCoordinatetext);
+		yCoordinate = (TextView) findViewById(R.id.YCoordinatetext);
+		
+		xCoordinateOri = (TextView) findViewById(R.id.XCoordinatetextOriginal);
+		yCoordinateOri = (TextView) findViewById(R.id.YCoordinatetextOriginal);
 		
 		wnum = new int[500];
 		
@@ -237,6 +269,10 @@ public class MainActivity extends Activity {
 	    @Override
 	    public void onClick(final View v) {
 	    	switch(v.getId()){
+	    		case R.id.setCorBtn : 
+	    			setCornerStatus = ! setCornerStatus;
+	    			drawView.setCornerCompass(setCornerStatus);
+	    		break;
 	    		case R.id.btn1 : 
 	    			
                    //Runnable r = new MyThread(v);
@@ -262,7 +298,6 @@ public class MainActivity extends Activity {
 					try {
 						ReStrEnco = new String(askEncoderData, "ISO-8859-1");
 					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					MainActivity.SendMsgUart(1,askEncoderData);
@@ -280,6 +315,28 @@ public class MainActivity extends Activity {
 	    				
 	    				nanoStatus.setText("Nano mxc2 connected");
 	    			
+	    			Point corPoint[] = findAlgo.GetCorner(drawView.getPoints());
+	    			
+	    			
+	    			
+	    			
+					// Draw outter line
+					drawView.drawOutterLine(corPoint , 20);
+	    			drawView.setDrawOutter(true);
+	    			
+	    			//Draw inner line
+	    			drawView.drawCorner(corPoint);
+	    			drawView.findCorner = true;
+	    			
+					drawView.postInvalidate();
+					
+					try {
+						Thread.sleep(50);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+
+					
 	    			//float test[] = floatTest();
 	    			
 	    			//Log.i(TAG,"find float test[0] = " + test[0] + " test[1] = " + test[1]);
@@ -350,7 +407,6 @@ public class MainActivity extends Activity {
 				try {
 					SendUartByte("pitchAngle bottom");
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 					break;
@@ -360,7 +416,6 @@ public class MainActivity extends Activity {
 				try {
 					SendUartByte("pitchAngle middle");
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 					break;
@@ -370,7 +425,6 @@ public class MainActivity extends Activity {
 				try {
 					SendUartByte("pitchAngle top");
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 					break;
@@ -380,7 +434,6 @@ public class MainActivity extends Activity {
 				try {
 					SendUartByte("stretch bottom");
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 					break;
@@ -390,7 +443,6 @@ public class MainActivity extends Activity {
 				try {
 					SendUartByte("stretch top");
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 					break;
@@ -538,7 +590,6 @@ public class MainActivity extends Activity {
 							try {
 								retStreamDatas = direc.GetAllByte();
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
 							
@@ -683,7 +734,6 @@ public class MainActivity extends Activity {
 					try {
 						ReStrEnco = new String(askEncoderData, "ISO-8859-1");
 					} catch (UnsupportedEncodingException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					MainActivity.SendMsgUart(1,askEncoderData);
@@ -692,7 +742,6 @@ public class MainActivity extends Activity {
 				try {
 					Thread.sleep(encoderWriteWiatInterval);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				//handler.postDelayed(rWEncoder, encoderWriteInterval);
@@ -715,21 +764,23 @@ public class MainActivity extends Activity {
 				Log.i(TAG, "EncoderThread running count = " + encoderCount);
 				// ReStrEnco = "12345";
 				//ReStrEnco = new String(endoerTestData, "ISO-8859-1");;
-				// ReStr = "abcde";
+				// ReStr = "abcde";6
 				Arrays.fill(dataByte, (byte)0x00);
 				// dataByte[0]  is xPolarity
 				// dataByte[1] -> [2] is X axis
 				// dataByte[3]  is yPolarity
 				// dataByte[4] -> [5] is Y axis
 				// dataByte[6] -> [7] CRC 16 , 0x00 = not used
-
-				dataByte = Arrays.copyOfRange(encoderTestData, 2, 10);
+				if (encoderDataChange)
+					dataByte = Arrays.copyOfRange(encoderTestData, 2, 10);
+				else
+					dataByte = Arrays.copyOfRange(encoderTestData2, 2, 10);
 				
+				encoderDataChange = !encoderDataChange;
 				/*
 				try {
 					encoderDataByteArr = ReStrEnco.getBytes("ISO-8859-1");
 				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}*/
 				
@@ -771,7 +822,7 @@ public class MainActivity extends Activity {
 					
 				
 					//Log.i(TAG,"Length="+ReByteEnco.length+",0="+ ReByteEnco[0]+",1="+ReByteEnco[1]);
-						//Log.i(TAG,"encoder rec msg = " + ReByteEnco + " leng = " + ReByteEnco.length);
+						Log.i(TAG,"encoder rec msg = " + ReByteEnco + " leng = " + ReByteEnco.length);
 						//for(int i=0;i<ReByteEnco.length;i++)
 						//	Log.i("wr","encoder data[ " + i + "] = " + ReByteEnco[i]);
 						if (  ReByteEnco.length  ==  11 && ReByteEnco[0] == 0x53 &&  ReByteEnco[1] == 0x0d)
@@ -804,7 +855,6 @@ public class MainActivity extends Activity {
 							try {
 								Thread.sleep(encoderReadWaitInterval);
 							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
 								e.printStackTrace();
 							}
 						}
@@ -904,13 +954,37 @@ public class MainActivity extends Activity {
 					float robotLocation[] = EKF((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2],(int) tempInt[0],(int) tempInt[1],(int) tempInt[2]);
 		///--------------------------------------------------------------------------------------------------
 					Point point = new Point();
-					point.x = robotLocation[0];
-					point.y = robotLocation[1];
+					// Calibration to center
+					xCoordinateOri.setText(" X ori : " + Float.toString(robotLocation[0]));
+					yCoordinateOri.setText(" Y ori : " + Float.toString(robotLocation[1]));
 					
-					//for test
+					point.x = (float) (robotLocation[0]*5 + 150);
+					point.y = (float) (robotLocation[1]*5 + 150);
+					
+					xCoordinate.setText(" X : " + Float.toString(point.x));
+					yCoordinate.setText(" Y : " + Float.toString(point.y));
+					
+					//add for test
 					//point.x = 200;
-					//point.y = 300;
-					drawView.points.add(point);
+					//point.y = 300;				
+					
+			        if (count == 0){
+			        	drawView.firsttouchX = point.x;
+			        	drawView.firsttouchY = point.y;
+//			        	path.moveTo(firsttouchX, firsttouchY);
+						count++;
+			        }
+			     
+			        drawView.current_TouchX = point.x;
+			        drawView.current_TouchY = point.y;
+			        
+			        drawView.points.add(point);
+//			        
+//			    	paint.setStyle(Paint.Style.STROKE);
+//			        path.lineTo(current_TouchX, current_TouchY);
+//					path.moveTo(current_TouchX, current_TouchY);
+//			        canvas.drawPath(path, paint);
+			        
 					drawView.postInvalidate();
 					
 					try {
@@ -919,6 +993,7 @@ public class MainActivity extends Activity {
 						e.printStackTrace();
 					}
 					// End
+					
 					encoderCount = 0;
 					nanoCount = 0;
 					nanoQueue.clear();
@@ -932,8 +1007,6 @@ public class MainActivity extends Activity {
 			handler.postDelayed(rCombine, combineInterval);
 		}
 	}
-	
-	
 	
 	public static ArrayList<byte[]> getEncoderRange(ArrayList<byte[]> list, int start, int last) {
 
@@ -1038,7 +1111,6 @@ public class MainActivity extends Activity {
 	
 	@Override
 	protected void onDestroy() {
-		// TODO Auto-generated method stub
 		timer.cancel();
 		MainActivity.CloseUart(driFd);
 		MainActivity.CloseUart(nanoFd);

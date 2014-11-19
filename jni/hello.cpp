@@ -56,10 +56,10 @@ static float Kk[8][3],Pk_HkT[8][3],HkPk_HkT[3][3],HkPk_HkTR[3][3],InvHkPk_HkTR[3
 static float KkdZ[8][1],Xk[8][1];
 static float KkHk[8][8],KkHkPk_[8][8],Pk[8][8];
 
-static float Xk_[8][1]={{190-50},{114-50},{190},{214*3},{325*3},{225},{325},{114}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
+static float Xk_[8][1]={{0},{0},{6},{0},{1.8},{2.7},{0.4},{22.5}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
 static float Pk_[8][8]={{1,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0},{0,0,1,0,0,0,0,0},{0,0,0,1,0,0,0,0},{0,0,0,0,1,0,0,0},{0,0,0,0,0,1,0,0},{0,0,0,0,0,0,1,0},{0,0,0,0,0,0,0,1}};
-static float Q[8][8]={{0.9,0,0,0,0,0,0,0},{0,0.9,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
-static float R[3][3]={{0.25,0,0},{0,0.25,0},{0,0,0.25}};//modify the rate of measurement
+static float Q[8][8]={{500,0,0,0,0,0,0,0},{0,500,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
+static float R[3][3]={{0.1,0,0},{0,0.1,0},{0,0,0.1}};//modify the rate of measurement
 
 static float X,Y,dX,dY;
 static float cosine,sine,VL,VR,V,W;

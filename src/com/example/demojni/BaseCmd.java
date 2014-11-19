@@ -2,11 +2,11 @@ package com.example.demojni;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+//import java.util.ArrayList;
+//import java.util.Arrays;
+//import java.util.HashMap;
+//import java.util.List;
+//import java.util.Map;
 
 public abstract class BaseCmd {
 	protected byte funcByte;
@@ -17,25 +17,25 @@ public abstract class BaseCmd {
 	protected static ByteArrayOutputStream retDataByte = new ByteArrayOutputStream();
 	
 	
-	private Map byte2Map = new HashMap();
-	private Map byte3Map = new HashMap();
-	private Map byte4Map = new HashMap();
-	private Map byte5Map = new HashMap();
+//	private Map byte2Map = new HashMap();
+//	private Map byte3Map = new HashMap();
+//	private Map byte4Map = new HashMap();
+//	private Map byte5Map = new HashMap();
 
 	public void SetByte(String[] inStr, byte[] bValue, int byteNum) {
 		for (int i = 0; i < inStr.length; i++) {
 			switch (byteNum) {
 			case 2:
-				this.byte3Map.put(inStr[i], bValue[i]);
+//				this.byte3Map.put(inStr[i], bValue[i]);
 				break;
 			case 3:
-				this.byte3Map.put(inStr[i], bValue[i]);
+//				this.byte3Map.put(inStr[i], bVal/ue[i]);
 				break;
 			case 4:
-				this.byte4Map.put(inStr[i], bValue[i]);
+//				this.byte4Map.put(inStr[i], bValue[i]);
 				break;
 			case 5:
-				this.byte5Map.put(inStr[i], bValue[i]);
+//				this.byte5Map.put(inStr[i], bValue[i]);
 				break;
 			default:
 				break;
@@ -50,16 +50,16 @@ public abstract class BaseCmd {
 		byte retByte = 0x00;
 		switch (byteNum) {
 		case 2:
-			retByte = (Byte) this.byte3Map.get(inStr);
+//			retByte = (Byte) this.byte3Map.get(inStr);
 			break;
 		case 3:
-			retByte = (Byte) this.byte3Map.get(inStr);
+//			retByte = (Byte) this.byte3Map.get(inStr);
 			break;
 		case 4:
-			retByte = (Byte) this.byte4Map.get(inStr);
+//			retByte = (Byte) this.byte4Map.get(inStr);
 			break;
 		case 5:
-			retByte = (Byte) this.byte5Map.get(inStr);
+//			retByte = (Byte) this.byte5Map.get(inStr);
 			break;
 		default:
 			break;

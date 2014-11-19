@@ -5,8 +5,7 @@ import java.io.IOException;
 import java.util.Arrays;
 
 public class StretchCmd extends BaseCmd{
-
-private String TAG = "StretchCmd";
+//private String TAG = "StretchCmd";
 	
 	private byte funcByte = (byte) 0x04;
 	private int dataSize = 3;

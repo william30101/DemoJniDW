@@ -3,12 +3,11 @@ package com.example.demojni;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-
-import android.util.Log;
+//import android.util.Log;
 
 public class DirectionCmd extends BaseCmd{
 
-	private String TAG = "DirectionCmd";
+//	private String TAG = "DirectionCmd";
 	
 	private byte funcByte = (byte) 0x01;
 	private int dataSize = 3;

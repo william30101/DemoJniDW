@@ -29,11 +29,15 @@ public final class R {
         public static final int stop=0x7f020009;
     }
     public static final class id {
+        public static final int XCoordinatetext=0x7f07001d;
+        public static final int XCoordinatetextOriginal=0x7f07001b;
+        public static final int YCoordinatetext=0x7f07001e;
+        public static final int YCoordinatetextOriginal=0x7f07001c;
         public static final int angleBottom=0x7f070013;
         public static final int angleMiddle=0x7f070014;
         public static final int angleTop=0x7f070016;
-        public static final int askBtn=0x7f07001d;
-        public static final int axisBtn=0x7f07001c;
+        public static final int askBtn=0x7f070022;
+        public static final int axisBtn=0x7f070021;
         public static final int bacLeft=0x7f07000a;
         public static final int bacRig=0x7f07000b;
         public static final int backward=0x7f070006;
@@ -47,8 +51,9 @@ public final class R {
         public static final int forward=0x7f070009;
         public static final int left=0x7f070010;
         public static final int nanoStatusText=0x7f070019;
-        public static final int relativeLayout1=0x7f07001b;
+        public static final int relativeLayout1=0x7f070020;
         public static final int right=0x7f070018;
+        public static final int setCorBtn=0x7f07001f;
         public static final int statusText=0x7f07000d;
         public static final int stop=0x7f070007;
         public static final int stretchBottom=0x7f070011;

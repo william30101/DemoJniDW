@@ -3,13 +3,12 @@ package com.example.demojni;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-
-import android.util.Log;
+//import java.util.HashMap;
+//import android.util.Log;
 
 public class StopCmd extends BaseCmd{
 
-private String TAG = "StopCmd";
+//private String TAG = "StopCmd";
 	
 	private byte funcByte = (byte) 0x02;
 	private int dataSize = 3;

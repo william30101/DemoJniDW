@@ -3,13 +3,11 @@ package com.example.demojni;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
-
-
-import android.util.Log;
+//import android.util.Log;
 
 public class AngleCmd extends BaseCmd{
 
-private String TAG = "AngleCmd";
+//private String TAG = "AngleCmd";
 	
 	private byte funcByte = (byte) 0x03;
 	private int dataSize = 3;
