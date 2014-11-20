@@ -47,7 +47,7 @@ public class XMPPSetting {
 	     connection = new XMPPConnection(connConfig);
 	     Log.i(TAG, "Name= " + username + " Pass = " + Pass);
 	     
-	     UCmd = new UartMsg();
+	     //UCmd = new UartMsg();
 
 	     try {
 	         connection.connect();
@@ -98,10 +98,10 @@ public class XMPPSetting {
 								Log.i(TAG, "Got text [" + message.getBody() + "] from [" + fromName + "]" + " Func num = " + cmdByte[1] + " Direc = " + cmdByte[2]);
 								//Do JNI here , We got correct data format here.
 								String decoded = new String(cmdByte, "ISO-8859-1");
-								UCmd.SendMsgUart(1,cmdByte);
+								MainActivity.SendMsgUart(1,cmdByte);
 							}
 							else
-								UCmd.SendMsgUartNano(message.getBody());
+								MainActivity.SendMsgUartNano(message.getBody());
 							
 							
 							

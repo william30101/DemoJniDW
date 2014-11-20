@@ -280,4 +280,48 @@
         android:layout_below="@+id/angleTop"
         android:text="startThread" />
 
+    <TextView
+        android:id="@+id/thetaView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/drawView1"
+        android:layout_marginLeft="57dp"
+        android:layout_toRightOf="@+id/uartReadBtn"
+        android:text="Theta Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/dwWeight"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/nanoStatusText"
+        android:layout_alignLeft="@+id/thetaView"
+        android:text="dwWeight"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <EditText
+        android:id="@+id/dwEditText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/forLeft"
+        android:layout_alignLeft="@+id/dwWeight"
+        android:ems="10" />
+
+    <EditText
+        android:id="@+id/encoderEditText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/dwEditText"
+        android:layout_below="@+id/left"
+        android:ems="10" />
+
+    <TextView
+        android:id="@+id/encoWeight"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/left"
+        android:layout_alignLeft="@+id/encoderEditText"
+        android:text="encoWeight"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
 </RelativeLayout>

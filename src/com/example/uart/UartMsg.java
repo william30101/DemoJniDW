@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import com.example.demojni.MainActivity;
+
 import android.util.Log;
 
 public class UartMsg extends BaseCmd{
@@ -22,6 +24,8 @@ public class UartMsg extends BaseCmd{
 	
 	DirectionCmd direc = new DirectionCmd();
 	StopCmd scmd = new StopCmd();
+	
+	static MainActivity main = new MainActivity();
 	
 	public UartMsg()
 	{
@@ -112,13 +116,13 @@ public class UartMsg extends BaseCmd{
 			Log.i(TAG,"ttymxc4 opend");
 			//portName = "ttymxc4";
 			//nanoFd = OpenUart(portName, 1 );
-			driFd = OpenUart(portName, 1 );
+			driFd = main.OpenUart(portName, 1 );
 			
 			//if (nanoFd > 0) {
 			if (driFd > 0) {
 				encoderOpend = true;
 				Baud_rate = 0; // 19200
-				SetUart(Baud_rate, 1);
+				main.SetUart(Baud_rate, 1);
 				fd = driFd;
 			}
 
@@ -128,13 +132,13 @@ public class UartMsg extends BaseCmd{
 			Log.i(TAG,"ttymxc2 opend");
 			//portName = "ttymxc4";
 			//nanoFd = OpenUart(portName, 1 );
-			nanoFd = OpenUart(portName, 2 );
+			nanoFd = main.OpenUart(portName, 2 );
 			
 			//if (nanoFd > 0) {
 			if (nanoFd > 0) {
 
 				Baud_rate = 2; // 9600
-				SetUart(Baud_rate, 2);
+				main.SetUart(Baud_rate, 2);
 				fd = nanoFd;
 			}
 		}
@@ -151,7 +155,7 @@ public class UartMsg extends BaseCmd{
 		
 	}
 	
-	static
+	/*static
 	{
 		try
 		{
@@ -174,5 +178,7 @@ public class UartMsg extends BaseCmd{
 	public static native byte[] ReceiveByteMsgUart(int fdNum);
 	public static native int StartCal();
 	public static native byte[] Combine(ArrayList<float[]> nanoq , ArrayList<int[]> encoq);
-	
+	public static native int WeightSet(float dwWeight , float encoderWeight);
+	public static native float[] EKF(float a,float b,float c,int left,int right,int degree);
+	*/
 }

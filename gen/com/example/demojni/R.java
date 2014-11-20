@@ -36,8 +36,8 @@ public final class R {
         public static final int angleBottom=0x7f070011;
         public static final int angleMiddle=0x7f070012;
         public static final int angleTop=0x7f070014;
-        public static final int askBtn=0x7f070024;
-        public static final int axisBtn=0x7f070023;
+        public static final int askBtn=0x7f070029;
+        public static final int axisBtn=0x7f070028;
         public static final int bacLeft=0x7f07000a;
         public static final int bacRig=0x7f070021;
         public static final int backward=0x7f070006;
@@ -46,12 +46,16 @@ public final class R {
         public static final int btn3=0x7f070004;
         public static final int drawView1=0x7f070000;
         public static final int drivingStatusText=0x7f070018;
+        public static final int dwEditText=0x7f070024;
+        public static final int dwWeight=0x7f070023;
+        public static final int encoWeight=0x7f070026;
+        public static final int encoderEditText=0x7f070025;
         public static final int forLeft=0x7f07000e;
         public static final int forRig=0x7f070008;
         public static final int forward=0x7f070009;
         public static final int left=0x7f070017;
         public static final int nanoStatusText=0x7f070019;
-        public static final int relativeLayout1=0x7f070022;
+        public static final int relativeLayout1=0x7f070027;
         public static final int right=0x7f070016;
         public static final int saveFileBtn=0x7f07001c;
         public static final int setCorBtn=0x7f070020;
@@ -62,6 +66,7 @@ public final class R {
         public static final int stretchTop=0x7f070010;
         public static final int textView1=0x7f070015;
         public static final int textView2=0x7f070013;
+        public static final int thetaView=0x7f070022;
         public static final int thrbtn=0x7f07001b;
         public static final int uartBtn=0x7f07000b;
         public static final int uartReadBtn=0x7f070005;

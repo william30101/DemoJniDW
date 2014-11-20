@@ -40,8 +40,8 @@ struct termios newtio, oldtio;
 static const char *classPathName = "com/example/demojni/MainActivity";
 #define LOG_TAG "hello"
 #define LOGI(fmt, args...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, fmt, ##args)
-#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, "234", fmt, ##args)
-#define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, "123", fmt, ##args)
+#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
+#define LOGE(fmt, args...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, fmt, ##args)
 
 /////////////////////////////////////////////////////////////////
 int X1=-2,Y1=0,Z1=0,X2=-2,Y2=0,Z2=0,X3=-2,Y3=0,Z3=0;
@@ -56,14 +56,14 @@ static float Kk[8][3],Pk_HkT[8][3],HkPk_HkT[3][3],HkPk_HkTR[3][3],InvHkPk_HkTR[3
 static float KkdZ[8][1],Xk[8][1];
 static float KkHk[8][8],KkHkPk_[8][8],Pk[8][8];
 
-static float Xk_[8][1]={{0},{0},{-6.3},{-0.9},{-23.4},{1.35},{3.6},{1.35}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
+static float Xk_[8][1]={{0},{0},{6.3},{1.7},{-0.83},{0.9},{2.7},{-1.8}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
 static float Pk_[8][8]={{1,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0},{0,0,1,0,0,0,0,0},{0,0,0,1,0,0,0,0},{0,0,0,0,1,0,0,0},{0,0,0,0,0,1,0,0},{0,0,0,0,0,0,1,0},{0,0,0,0,0,0,0,1}};
 
 //DW1000
-static float Q[8][8]={{0.1,0,0,0,0,0,0,0},{0,0.1,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
+static float Q[8][8]={{1,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
 
 //Encoder
-static float R[3][3]={{1000,0,0},{0,1000,0},{0,0,1000}};//modify the rate of measurement
+static float R[3][3]={{99,0,0},{0,99,0},{0,0,99}};//modify the rate of measurement
 
 static float X,Y,dX,dY;
 static float cosine,sine,VL,VR,V,W;
@@ -318,12 +318,12 @@ extern "C"
 				write(nanoFd, buf, len);
 			}
 			LOGI("len = %d",len);
-			//LOGI("Write data 0 = %x",buf[0]);
-			//LOGI("Write data 1 = %x",buf[1]);
-			//LOGI("Write data 2 = %x",buf[2]);
-			//LOGI("Write data 3 = %x",buf[3]);
-			//LOGI("Write data 4 = %x",buf[4]);
-			//LOGI("Write data 5 = %x",buf[5]);
+			LOGI("Write data 0 = %x",buf[0]);
+			LOGI("Write data 1 = %x",buf[1]);
+			LOGI("Write data 2 = %x",buf[2]);
+			LOGI("Write data 3 = %x",buf[3]);
+			LOGI("Write data 4 = %x",buf[4]);
+			LOGI("Write data 5 = %x",buf[5]);
 			//LOGI("Write data 6 = %x",buf[6]);
 
 			env->ReleaseByteArrayElements(inByte, a, 0);
@@ -356,12 +356,6 @@ extern "C"
 		jfloatArray result;
 		memset(buffer, 0, sizeof(buffer));
 		memset(buf, 0, sizeof(buf));
-
-
-
-
-
-
 
 		if (fdnum == 1)
 			len = read(driveFd, buffer, 255);
@@ -476,7 +470,7 @@ extern "C"
 		//float RobotLocation[] = { 1.0 , 2.0};
 		//result = env->NewFloatArray(2); // Store X , Y data
 
-		LOGI("DW weight = %x encoder weight = %x",dwWeight,encoderWeight);
+		LOGI("DW weight = %f encoder weight = %f",dwWeight,encoderWeight);
 
 		Q[0][0] = dwWeight;
 		Q[1][1] = dwWeight;
@@ -495,8 +489,12 @@ extern "C"
 	{
 		FILE *fp = NULL;
 		jfloatArray result;
-		float RobotLocation[2];
-		result = env->NewFloatArray(2); // Store X , Y data
+		// [0] mesure X [1] mesure Y
+		// [2] State X  [3] state Y
+		float RobotLocation[4];
+		result = env->NewFloatArray(4); // Store X , Y data
+
+		LOGI("dwWeight=%f encoderWeight=%f",Q[0][0],R[0][0]);
 
 		int i,j,k,l;
 				if (C==0){
@@ -614,6 +612,10 @@ extern "C"
 				LOGD("Xk0=%.3f",Xk[0][0]);
 				LOGE("Xk1=%.3f",Xk[1][0]);
 
+
+				RobotLocation[0] = Xk[0][0];
+				RobotLocation[1] = Xk[1][0];
+
 				//fp = fopen("/sdcard/data2.txt","a");
 				//fprintf(fp,"Xk=%.4f,Yk=%.4f\n",Xk[0][0],Xk[1][0]);
 				//fprintf(fp,"left=%d,right=%d,compass=%d\n",left,right,degree);
@@ -688,10 +690,10 @@ extern "C"
 				LOGD("Xk_0=%.3f",Xk_[0][0]);
 				LOGE("Xk_1=%.3f",Xk_[1][0]);
 
-				RobotLocation[0] = Xk_[0][0];
-				RobotLocation[1] = Xk_[1][0];
+				RobotLocation[2] = Xk_[0][0];
+				RobotLocation[3] = Xk_[1][0];
 
-				env->SetFloatArrayRegion(result, 0, 2, RobotLocation);
+				env->SetFloatArrayRegion(result, 0, 4, RobotLocation);
 
 		///-----Error covarinace----------------------------------------------------------------------------
 				for(i=0;i<8;i++){

@@ -44,8 +44,8 @@ public class MainActivity extends Activity {
 
 	boolean setCornerStatus = false;
 	private static String TAG = "App";
-	EditText dataText;
-	TextView drivingStatus,nanoStatus,xCoordinate,yCoordinate,xCoordinateOri,yCoordinateOri;
+	EditText dataText,dwWeight,encoderWeight;
+	TextView drivingStatus,nanoStatus,xCoordinate,yCoordinate,xCoordinateOri,yCoordinateOri,thetaView;
 	Button writeBtn,writeFileBtn,startCalBtn,uartBtn,uartReadBtn,uartWriteBtn,thrBtn;
 	private int[] wnum;
 	File sdcard,file;
@@ -181,10 +181,16 @@ public class MainActivity extends Activity {
 		
 		drawView = (DrawView) findViewById(R.id.drawView1);
 		
+		dwWeight = (EditText)findViewById(R.id.dwEditText);
+		encoderWeight = (EditText)findViewById(R.id.encoderEditText);
+		
+		dwWeight.setText("1");
+		encoderWeight.setText("1");
+		
 		//Open uart when App lunch
 		
-		if (OpenSetUartPort("ttymxc4") > 0)
-			drivingStatus.setText("Driving mxc4 connected");
+		if (OpenSetUartPort("ttymxc3") > 0)
+			drivingStatus.setText("Driving mxc3 connected");
 		
 		if (OpenSetUartPort("ttymxc2") > 0)
 			nanoStatus.setText("Nano mxc2 connected");
@@ -246,6 +252,8 @@ public class MainActivity extends Activity {
 		
 		xCoordinateOri = (TextView) findViewById(R.id.XCoordinatetextOriginal);
 		yCoordinateOri = (TextView) findViewById(R.id.YCoordinatetextOriginal);
+		
+		thetaView = (TextView) findViewById(R.id.thetaView);
 		
 		wnum = new int[500];
 		
@@ -377,7 +385,7 @@ public class MainActivity extends Activity {
 	    		case R.id.uartBtn : 
 	    			// Open Uart here
 	    			
-	    			if (OpenSetUartPort("ttymxc4") > 0)
+	    			if (OpenSetUartPort("ttymxc3") > 0)
 	    				drivingStatus.setText("Driving mxc4 connected");
 	    			
 	    			if (OpenSetUartPort("ttymxc2") > 0)
@@ -477,6 +485,7 @@ public class MainActivity extends Activity {
 	    			break;
 	    		case R.id.angleBottom:
 					Log.i(TAG,"angleBottom");
+					
 					//XMPPSet.XMPPSendText("james1", "pitchAngle bottom");
 				try {
 					SendUartByte("pitchAngle bottom");
@@ -494,6 +503,8 @@ public class MainActivity extends Activity {
 				}
 					break;
 				case R.id.angleTop:
+					WeightSet(Float.parseFloat(dwWeight.getText().toString())
+							,Float.parseFloat(encoderWeight.getText().toString()));
 					Log.i(TAG,"angleTop");
 					//XMPPSet.XMPPSendText("james1", "pitchAngle top");
 				try {
@@ -1099,6 +1110,12 @@ public class MainActivity extends Activity {
 							encoderDataQueue.add(tempInt);
 						}
 						
+						thetaView.setText("theta : " + tempInt[2]);
+						
+						 
+						WeightSet(Float.parseFloat(dwWeight.getText().toString())
+								,Float.parseFloat(encoderWeight.getText().toString()));
+						
 			///監看nanopan輸入值
 						Log.i(TAG,"Nano1=" + nanoFloat_1[0] + " Nano2=" + nanoFloat_1[1] + " Nano3= " + nanoFloat_1[2]);
 			///------EKF-----------------------------------------------------------------------------------------
@@ -1107,19 +1124,19 @@ public class MainActivity extends Activity {
 						Point point = new Point();
 						Point pointOriginal = new Point();
 						// Calibration to center
-						xCoordinateOri.setText(" X ori : " + Float.toString(robotLocation[0]));
-						yCoordinateOri.setText(" Y ori : " + Float.toString(robotLocation[1]));
+						xCoordinateOri.setText(" State X  : " + Float.toString(robotLocation[2]));
+						yCoordinateOri.setText(" State Y : " + Float.toString(robotLocation[3]));
 						
-						pointOriginal.x = robotLocation[0];
-						pointOriginal.y = robotLocation[1];
+						pointOriginal.x = robotLocation[2];
+						pointOriginal.y = robotLocation[3];
 						
 						AxisPointData.add(pointOriginal);
 						
 						point.x = (float) (robotLocation[0]*5 + 150);
 						point.y = (float) (robotLocation[1]*5 + 150);
 						
-						xCoordinate.setText(" X : " + Float.toString(point.x));
-						yCoordinate.setText(" Y : " + Float.toString(point.y));
+						xCoordinate.setText(" Measure X : " + Float.toString(robotLocation[0]));
+						yCoordinate.setText(" Measure Y : " + Float.toString(robotLocation[1]));
 						
 						//add for test
 						//point.x = 200;
@@ -1212,8 +1229,8 @@ public class MainActivity extends Activity {
 		
 		// mxc0 for driving board , 19200
 		// mxc2 for nanoPan , Baudrate 115200
-		if (portName.equals("ttymxc4")) {
-			Log.i(TAG,"ttymxc4 opend");
+		if (portName.equals("ttymxc3")) {
+			Log.i(TAG,"ttymxc3 opend");
 			//portName = "ttymxc4";
 			//nanoFd = OpenUart(portName, 1 );
 			driFd = OpenUart(portName, 1 );
