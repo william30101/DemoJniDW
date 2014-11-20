@@ -65,14 +65,6 @@
         android:layout_toLeftOf="@+id/backward"
         android:src="@drawable/backleft" />
 
-    <ImageButton
-        android:id="@+id/bacRig"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBottom="@+id/backward"
-        android:layout_alignLeft="@+id/forRig"
-        android:src="@drawable/backrig" />
-
     <Button
         android:id="@+id/uartBtn"
         android:layout_width="wrap_content"
@@ -92,22 +84,13 @@
         android:text="1.INIT 2.MODE" />
 
     <Button
-        android:id="@+id/btn1"
+        android:id="@+id/startMapBuilding"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/uartReadBtn"
         android:minHeight="32dip"
-        android:text="3.START" />
-
-    <Button
-        android:id="@+id/thrbtn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/btn2"
-        android:layout_alignBottom="@+id/btn2"
-        android:layout_alignRight="@+id/uartBtn"
-        android:text="startThread" />
+        android:text="Start Building" />
 
     <ImageButton
         android:id="@+id/forLeft"
@@ -116,14 +99,6 @@
         android:layout_alignTop="@+id/uartReadBtn"
         android:layout_toLeftOf="@+id/stop"
         android:src="@drawable/fordleft" />
-
-    <ImageButton
-        android:id="@+id/left"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/thrbtn"
-        android:layout_toLeftOf="@+id/forward"
-        android:src="@drawable/left" />
 
     <Button
         android:id="@+id/stretchBottom"
@@ -188,14 +163,6 @@
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
     <ImageButton
-        android:id="@+id/stop"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/right"
-        android:layout_toLeftOf="@+id/bacRig"
-        android:src="@drawable/stop" />
-
-    <ImageButton
         android:id="@+id/right"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -210,14 +177,6 @@
         android:layout_below="@+id/btn3"
         android:layout_toLeftOf="@+id/forRig"
         android:src="@drawable/forward" />
-
-    <TextView
-        android:id="@+id/nanoStatusText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/textView1"
-        android:layout_alignTop="@+id/uartBtn"
-        android:text="Nano mxc2 Disconnect" />
 
     <TextView
         android:id="@+id/drivingStatusText"
@@ -236,41 +195,89 @@
         android:text="Large Text"
         android:textAppearance="?android:attr/textAppearanceLarge" />
 
-    <TextView
-        android:id="@+id/YCoordinatetextOriginal"
+    <Button
+        android:id="@+id/saveFileBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/XCoordinatetextOriginal"
-        android:layout_alignTop="@+id/XCoordinatetext"
-        android:layout_marginTop="12dp"
-        android:text="Large Text"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
-
-    <TextView
-        android:id="@+id/XCoordinatetext"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/angleBottom"
-        android:layout_below="@+id/XCoordinatetextOriginal"
-        android:text="Large Text"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
+        android:layout_alignBaseline="@+id/btn3"
+        android:layout_alignBottom="@+id/btn3"
+        android:layout_toRightOf="@+id/textView2"
+        android:text="save" />
 
     <TextView
         android:id="@+id/YCoordinatetext"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/XCoordinatetextOriginal"
-        android:layout_toRightOf="@+id/textView2"
+        android:layout_alignBaseline="@+id/XCoordinatetext"
+        android:layout_alignBottom="@+id/XCoordinatetext"
+        android:layout_alignLeft="@+id/bacLeft"
         android:text="Large Text"
         android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/YCoordinatetextOriginal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/setCorBtn"
+        android:layout_alignLeft="@+id/XCoordinatetextOriginal"
+        android:text="Large Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <ImageButton
+        android:id="@+id/stop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/forRig"
+        android:layout_toLeftOf="@+id/forRig"
+        android:src="@drawable/stop" />
+
+    <ImageButton
+        android:id="@+id/left"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/forLeft"
+        android:layout_toLeftOf="@+id/forward"
+        android:src="@drawable/left" />
+
+    <ImageButton
+        android:id="@+id/bacRig"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/XCoordinatetextOriginal"
+        android:layout_toRightOf="@+id/backward"
+        android:src="@drawable/backrig" />
 
     <Button
         android:id="@+id/setCorBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignBaseline="@+id/YCoordinatetext"
-        android:layout_alignBottom="@+id/YCoordinatetext"
-        android:layout_alignParentRight="true"
+        android:layout_below="@+id/XCoordinatetextOriginal"
+        android:layout_toRightOf="@+id/backward"
         android:text="setCor" />
+
+    <TextView
+        android:id="@+id/XCoordinatetext"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/YCoordinatetextOriginal"
+        android:layout_alignLeft="@+id/angleBottom"
+        android:text="Large Text"
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/nanoStatusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/uartReadBtn"
+        android:layout_alignLeft="@+id/angleTop"
+        android:text="Nano mxc2 Disconnect" />
+
+    <Button
+        android:id="@+id/thrbtn"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/drawView1"
+        android:layout_below="@+id/angleTop"
+        android:text="startThread" />
 
 </RelativeLayout>

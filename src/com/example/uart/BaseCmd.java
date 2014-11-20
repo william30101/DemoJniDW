@@ -1,4 +1,4 @@
-package com.example.demojni;
+package com.example.uart;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

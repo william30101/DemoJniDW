@@ -1,9 +1,11 @@
 package com.example.demojni;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -12,36 +14,22 @@ import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import org.xmlpull.v1.XmlPullParser;
-
 import android.annotation.TargetApi;
 import android.app.Activity;
-import android.content.Context;
-import android.content.res.Resources;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.util.AttributeSet;
 import android.util.Log;
-import android.util.Xml;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.View.OnTouchListener;
-import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PathMeasure;
@@ -49,6 +37,8 @@ import android.graphics.Paint.Style;
 
 public class MainActivity extends Activity {
 
+	private ExecutorService service = Executors.newFixedThreadPool(10);
+	
 	boolean debugNanoQueue = false;
 	boolean debugEncoderQueue = false;
 
@@ -94,6 +84,8 @@ public class MainActivity extends Activity {
 	private static ArrayList<byte[]> encoderQueue = new ArrayList<byte[]>();
 	
 	private Handler handler = new Handler();
+	
+	private byte[] startMapBuilding = {0x53,0x0e,0x01,0x00,0x00,0x45};
 	
 	private String nanoTestData[] = {
 			"#-001.27:017:001:015","#-001.21:017:002:015","#-001.10:017:003:015",
@@ -146,22 +138,37 @@ public class MainActivity extends Activity {
 	
 	FindCornerAlgorithm findAlgo = new FindCornerAlgorithm();
 	
+	// for DBG , save X Y data to file
+	boolean nanoStart = false , 
+			 encoderStart = false , 
+			 combineStart = false;
+	List<Point> AxisPointData = new ArrayList<Point>();
+	
+	
+	private String mName;	//For XMPP thread user name
+	private String mPass;	//For XMPP thread user password
+	
+	private NetworkStatus loggin;
+	private XMPPSetting XMPPSet;
+	
+	public Thread XMPPThread = new XMPPThread(); 
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		
 		
-		writeBtn = (Button) findViewById(R.id.btn1);
-		writeFileBtn = (Button) findViewById(R.id.btn2);
+		//writeBtn = (Button) findViewById(R.id.btn1);
+		//writeFileBtn = (Button) findViewById(R.id.btn2);
 		startCalBtn = (Button) findViewById(R.id.btn3);
 		uartBtn = (Button) findViewById(R.id.uartBtn);
 		uartReadBtn = (Button) findViewById(R.id.uartReadBtn);
 		uartWriteBtn = (Button) findViewById(R.id.uartWriteBtn);
 		thrBtn = (Button) findViewById(R.id.thrbtn);
 
-		writeBtn.setOnClickListener(ClickListener);
-		writeFileBtn.setOnClickListener(ClickListener);
+		//writeBtn.setOnClickListener(ClickListener);
+		//writeFileBtn.setOnClickListener(ClickListener);
 		startCalBtn.setOnClickListener(ClickListener);
 		uartBtn.setOnClickListener(ClickListener);
 		uartReadBtn.setOnClickListener(ClickListener);
@@ -204,6 +211,10 @@ public class MainActivity extends Activity {
 		Button askBtn = (Button) findViewById(R.id.askBtn);
 		
 		Button setCorBtn = (Button) findViewById(R.id.setCorBtn);
+		
+		Button saveFileBtn = (Button) findViewById(R.id.saveFileBtn);
+		
+		Button startMapBuilding = (Button) findViewById(R.id.startMapBuilding);
 
 		backward.setOnClickListener(ClickListener);
 		forward.setOnClickListener(ClickListener);
@@ -223,6 +234,10 @@ public class MainActivity extends Activity {
 
 		setCorBtn.setOnClickListener(ClickListener);
 		
+		saveFileBtn.setOnClickListener(ClickListener);
+		
+		startMapBuilding.setOnClickListener(ClickListener);
+		
 		nanoStatus = (TextView) findViewById(R.id.nanoStatusText);
 		drivingStatus = (TextView) findViewById(R.id.drivingStatusText);
 		
@@ -237,6 +252,8 @@ public class MainActivity extends Activity {
 		Arrays.fill(wnum, 0);
 		
 		Arrays.fill(ReByteEnco, (byte)0x01);
+		
+		signin("james1");
 		
 		/*
 		TimerTask task = new TimerTask(){
@@ -265,6 +282,45 @@ public class MainActivity extends Activity {
 	}
 
 	
+	public void signin(String name)
+    {
+			mName = name;
+			mPass = "0000";
+
+			loggin = NetworkStatus.getInstance();
+			XMPPSet = new XMPPSetting();
+			XMPPThread.start();
+    }
+	
+	class XMPPThread extends Thread {
+		 
+        @Override
+        public void run() {
+            // TODO Auto-generated method stub
+            super.run();
+            try {
+            	Log.i(TAG,"Name = "+mName + " Pass = "+mPass);
+            	loggin.SetLogStatus(XMPPSet.XMPPStart(mName,mPass));
+            	
+            	
+            	if (loggin.GetLogStatus())
+            	{
+            		Log.i(TAG,mName + " Loggin successful");
+            		//Sendmsg("ok");
+            	}
+            	else
+            	{
+            		Log.i(TAG,mName + " Loggin Fail");
+            		//Sendmsg("Loggin Fail");
+            	}
+
+            } catch (Exception e) {
+                 e.printStackTrace();
+            }
+        }
+
+    }
+	
 	private OnClickListener ClickListener = new OnClickListener() {
 	    @Override
 	    public void onClick(final View v) {
@@ -273,6 +329,10 @@ public class MainActivity extends Activity {
 	    			setCornerStatus = ! setCornerStatus;
 	    			drawView.setCornerCompass(setCornerStatus);
 	    		break;
+	    		case R.id.startMapBuilding :
+	    			Log.i(TAG,"Send Start Map building cmd ");
+	    			MainActivity.SendMsgUart(1,startMapBuilding);
+	    			break;
 	    		case R.id.btn1 : 
 	    			
                    //Runnable r = new MyThread(v);
@@ -290,6 +350,15 @@ public class MainActivity extends Activity {
 
 	    			
 	    			break;
+	    		case R.id.saveFileBtn : 
+	    			
+    				nanoStart = false;
+    				encoderStart = false;
+    				combineStart = false;
+	    			
+	    			Runnable saveR = new MyThread(v);
+                   	new Thread(saveR).start();
+                   	break;
 	    		case R.id.btn3 : 
 	    			//Runnable r3 = new MyThread(v);
                    //	new Thread(r3).start();
@@ -378,6 +447,11 @@ public class MainActivity extends Activity {
 	    			
 	    			break;
 	    		case R.id.thrbtn : 
+	    			
+	    				nanoStart = true;
+	    				encoderStart = true;
+	    				combineStart = true;
+	    			
 	    				handler.postDelayed(rNano, 100);
     				
 //	                   	new Thread(rNano).start();
@@ -575,11 +649,78 @@ public class MainActivity extends Activity {
 				    			    //You'll need to add proper error handling here
 				    			}
 						}
+					} else if (sub.equals("btn3")) {
+						// StartCal();
+						// MainActivity.SendMsgUart(startNanoPan,2);
 					}
-					else if (sub.equals("btn3"))
-					{
-						//StartCal();
-						//MainActivity.SendMsgUart(startNanoPan,2);
+					else if (sub.equals("saveFileBtn")) {
+						Log.i(TAG, "save btn");
+						
+						try {
+							Thread.sleep(300);
+						} catch (InterruptedException e2) {
+							// TODO Auto-generated catch block
+							e2.printStackTrace();
+						}
+						
+						boolean sdCardExist = Environment.getExternalStorageState()
+								.equals(android.os.Environment.MEDIA_MOUNTED);
+		
+						if (sdCardExist && AxisPointData.size() > 0) {
+							//Encoder enc = new Encoder();
+							alllen = 0;
+		
+							sdcard = Environment.getExternalStorageDirectory();
+		
+							String dirc = sdcard.getParent();
+							dirc = dirc + "/legacy";
+		
+							file = new File(dirc, "axisData.txt");
+							Log.i(TAG, " External storage path =" + dirc);
+		
+							if (!file.exists()) {
+								try {
+									file.createNewFile();
+								} catch (IOException e1) {
+									// TODO Auto-generated catch block
+									e1.printStackTrace();
+								}
+							} else {
+								file.delete();
+		
+								try {
+									file.createNewFile();
+								} catch (IOException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+								}
+							}
+
+							BufferedWriter writer = null;
+							try {
+								writer = new BufferedWriter(new FileWriter(file,true));
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							try {
+		
+								//axisData = enc.GetAxisQueue();
+								
+								for (int i = 0; i < AxisPointData.size(); i++) {
+									Point axisPoint = AxisPointData.get(i);
+									writer.write("index = " + i + " x = " + Float.toString(axisPoint.x)
+											+ "  y = " + Float.toString(axisPoint.y) + "\r\n");
+								}
+								writer.close();
+								AxisPointData.clear();
+		
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+		
+						}
 					}
 					else
 					{
@@ -595,14 +736,19 @@ public class MainActivity extends Activity {
 							
 							
 							byte[] retBytes = retStreamDatas.toByteArray();
+							retBytes = retStreamDatas.toByteArray();
 							retStreamDatas.reset();
+							
+							Log.i(TAG,"Send Direction cmd");
 							
 							for (int i =0;i<retBytes.length;i++)
 							{
 								retBytes[i] = (byte) (retBytes[i] & 0xFF);
+								Log.i(TAG,"byte " + i + " = " + retBytes[i]);
 							}
 							
 							SendMsgUart(1,retBytes);
+
 						}
 					}
 				
@@ -615,85 +761,86 @@ public class MainActivity extends Activity {
 	public class NanoThread implements Runnable {
 		   
 		public void run() {
-			
-			if (debugNanoQueue)
+			if (nanoStart)
 			{
-				//Log.i(TAG,"NanoThread running count = " + nanoCount);
-				/*ReStr = testdata1;
-				//ReStr = "abcde";
-				
-				String[] daf = ReStr.split("\\s+");
-				byte[] nanoBy = new byte[daf.length];
-				for(int i=0;i<daf.length ; i++)
-					nanoBy[i] = Byte.parseByte(daf[i]);
-				*/
-				
-				//String nanoStr = ReceiveMsgUart(2);
-				if (nanoCount  > (nanoTestData.length - 1))
-					nanoCount = 0;
+				if (debugNanoQueue)
+				{
+					//Log.i(TAG,"NanoThread running count = " + nanoCount);
+					/*ReStr = testdata1;
+					//ReStr = "abcde";
 					
-				String nanoStr = nanoTestData[nanoCount];
-				String[] daf = nanoStr.split(":");
-				float[] myflot = {Float.parseFloat(daf[2]),Float.parseFloat(daf[0].substring(2, daf[0].length()))};
-				
-				//Log.i(TAG,"anchor number = " + myflot[0] + "data = " + myflot[1]);
-				
-				//Get data : #-001.27:017:001:015
-				 
-				
-				nanoQueue.add(myflot);
-				nanoCount++;
-				
-				
-				handler.postDelayed(rNano,nanoInterval);
-			
-		    }
-			else
-			{
-				
-				if (nanoOpend) {
+					String[] daf = ReStr.split("\\s+");
+					byte[] nanoBy = new byte[daf.length];
+					for(int i=0;i<daf.length ; i++)
+						nanoBy[i] = Byte.parseByte(daf[i]);
+					*/
 					
-					ReStrNano = ReceiveMsgUart(2);
-					//Log.i(TAG,"rec msg = " + ReStrNano);
-					if ( ReStrNano != null) {
-						//Log.i(TAG,"Nano Receive message = "+ ReStrNano + " leng= " + ReStrNano.length());
-						String[] line20 =  ReStrNano.split("\r\n");
-						//Log.i(TAG,"Nano line20 = " + line20[0]);
-						for(int i=0 ;i< line20.length;i++)
-						{
-							//Log.i(TAG,"Nano line20[" + i + " ] = " + line20[i]);
-							if (line20[i].contains("#") && line20[i].length() >= 5 && line20[i].contains(":"))
+					//String nanoStr = ReceiveMsgUart(2);
+					if (nanoCount  > (nanoTestData.length - 1))
+						nanoCount = 0;
+						
+					String nanoStr = nanoTestData[nanoCount];
+					String[] daf = nanoStr.split(":");
+					float[] myflot = {Float.parseFloat(daf[2]),Float.parseFloat(daf[0].substring(2, daf[0].length()))};
+					
+					//Log.i(TAG,"anchor number = " + myflot[0] + "data = " + myflot[1]);
+					
+					//Get data : #-001.27:017:001:015
+					 
+					
+					nanoQueue.add(myflot);
+					nanoCount++;
+					
+					
+					handler.postDelayed(rNano,nanoInterval);
+				
+			    }
+				else
+				{
+					
+					if (nanoOpend) {
+						
+						ReStrNano = ReceiveMsgUart(2);
+						//Log.i(TAG,"rec msg = " + ReStrNano);
+						if ( ReStrNano != null) {
+							//Log.i(TAG,"Nano Receive message = "+ ReStrNano + " leng= " + ReStrNano.length());
+							String[] line20 =  ReStrNano.split("\r\n");
+							//Log.i(TAG,"Nano line20 = " + line20[0]);
+							for(int i=0 ;i< line20.length;i++)
 							{
-								String[] daf = line20[i].split(":");
-
-								if (daf.length == 4)
+								//Log.i(TAG,"Nano line20[" + i + " ] = " + line20[i]);
+								if (line20[i].contains("#") && line20[i].length() >= 5 && line20[i].contains(":"))
 								{
-									float[] myflot = {
-											Float.parseFloat(daf[2]),
-											Float.parseFloat(daf[0].substring(
-													2, daf[0].length())) };
-
-									
-									
-									// If data > 0 , we use it , else ignore it.
-									if (myflot[1] > 0) 				
+									String[] daf = line20[i].split(":");
+	
+									if (daf.length == 4)
 									{
-										Log.i(TAG, "Nano my float distance = "
-												+ myflot[1]);
-										nanoQueue.add(myflot);
+										float[] myflot = {
+												Float.parseFloat(daf[2]),
+												Float.parseFloat(daf[0].substring(
+														2, daf[0].length())) };
+	
+										
+										
+										// If data > 0 , we use it , else ignore it.
+										if (myflot[1] > 0) 				
+										{
+											Log.i(TAG, "Nano my float distance = "
+													+ myflot[1]);
+											nanoQueue.add(myflot);
+										}
+										// view.append(ReStr);
+										// scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+										ReStrNano = null;
 									}
-									// view.append(ReStr);
-									// scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-									ReStrNano = null;
 								}
 							}
 						}
 					}
+					
+					handler.postDelayed(rNano,nanoInterval);
 				}
-				
-				handler.postDelayed(rNano,nanoInterval);
 			}
-			
 			
 		}
 	}
@@ -707,7 +854,8 @@ public class MainActivity extends Activity {
 			singleThreadExecutor.execute(rWEncoder);
 			singleThreadExecutor.execute(rREncoder);
 
-			handler.postDelayed(rEncoder, encoderWriteWiatInterval
+			if (encoderStart)
+				handler.postDelayed(rEncoder, encoderWriteWiatInterval
 					+ encoderReadWaitInterval);
 		}
 
@@ -875,136 +1023,147 @@ public class MainActivity extends Activity {
 
 		public void run() {
 
-			// Log.i(TAG,"encoderOpend = " + encoderOpend + "  nanoOpend = "
-			// + nanoOpend );
-			//Log.i(TAG, "nanoQueue.size() = " + nanoQueue.size()
-			//		+ " encoderQueue.size() = " + encoderQueue.size());
+			if (combineStart )
+			{
 			
-			if ( ( nanoOpend== true || debugNanoQueue == true) 
-					&& ( encoderOpend == true || debugEncoderQueue == true ) ) {
-				// byte[] beSendMsg = new byte[beSentMessage];;
-
-				Log.i(TAG, "nanoQueue.size() = " + nanoQueue.size()
-						+ " encoderQueue.size() = " + encoderQueue.size());
-
-				if (nanoQueue.size() >= getNanoDataSize + 4
-						&& encoderQueue.size() >= getEncoderDataSize) {
-
-					// Arrays.fill(beSendMsg, (byte)0x00);
-
-					minusNumber = nanoQueue.size() - getNanoDataSize;
-					// Two input here.
-
-					if (nanoQueue.size() % 3 != 0) {
-
-						minusNumber = nanoQueue.size() - getNanoDataSize
-								- (nanoQueue.size() % 3);
-					}
-
-					// Two input here.
-					ArrayList<float[]> nanoData = getNanoRange(nanoQueue,
-							minusNumber, nanoQueue.size()
-									- (nanoQueue.size() % 3));
-					ArrayList<byte[]> encoderData = getEncoderRange(encoderQueue,
-							encoderQueue.size() - getEncoderDataSize,
-							encoderQueue.size());
-
-
-					
-					
-					
-					// Calculate nanopan data and encoder data here (java
-					// layer).
-					// Encoder data format
-					// [L Polarity] [L2] [L1] [R polarity] [R2] [R1] [COM2] [COM1] [0x45]
-					// Save to byte array beSendMsg[11]
-					// ....................
-					for (int i = 0; i < nanoData.size(); i++) {
-						nanoFloat = nanoData.get(i);
-						nanoFloat_1[i]=nanoFloat[1];
-						Log.i(TAG, "combine nanoFloat [" + i + " ] = "
-								+ nanoFloat_1[i]);
-						
-					}
-
-					ArrayList<int[]> encoderDataQueue = new ArrayList<int[]>();
-					byte[] encoByte = encoderData.get(0);
-					int[] tempInt = new int[3]; // L Wheel , R Wheel , Compass
-					for (int i=0;i<encoderData.size();i++)
-					{
-						tempInt[0]  = ( (encoByte[1] << 8) & 0xff00 | (encoByte[2] & 0xff));
-						if (encoByte[0] == 2)
-							tempInt[0] = -tempInt[0];
-						
-						tempInt[1]  = ( (encoByte[4] << 8) & 0xff00 | (encoByte[5] & 0xff));
-						if (encoByte[3] == 2)
-							tempInt[1] = -tempInt[1];
-						
-						tempInt[2]  = ( (encoByte[6] << 8) & 0xff00 | (encoByte[7] & 0xff));
-						
-						
-						Log.i(TAG,"encoder data L=" + tempInt[0] + " R=" + tempInt[1] + " com = " + tempInt[2]);
-						
-						encoderDataQueue.add(tempInt);
-					}
-					
-		///監看nanopan輸入值
-					Log.i(TAG,"Nano1=" + nanoFloat_1[0] + " Nano2=" + nanoFloat_1[1] + " Nano3= " + nanoFloat_1[2]);
-		///------EKF-----------------------------------------------------------------------------------------
-					float robotLocation[] = EKF((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2],(int) tempInt[0],(int) tempInt[1],(int) tempInt[2]);
-		///--------------------------------------------------------------------------------------------------
-					Point point = new Point();
-					// Calibration to center
-					xCoordinateOri.setText(" X ori : " + Float.toString(robotLocation[0]));
-					yCoordinateOri.setText(" Y ori : " + Float.toString(robotLocation[1]));
-					
-					point.x = (float) (robotLocation[0]*5 + 150);
-					point.y = (float) (robotLocation[1]*5 + 150);
-					
-					xCoordinate.setText(" X : " + Float.toString(point.x));
-					yCoordinate.setText(" Y : " + Float.toString(point.y));
-					
-					//add for test
-					//point.x = 200;
-					//point.y = 300;				
-					
-			        if (count == 0){
-			        	drawView.firsttouchX = point.x;
-			        	drawView.firsttouchY = point.y;
-//			        	path.moveTo(firsttouchX, firsttouchY);
-						count++;
-			        }
-			     
-			        drawView.current_TouchX = point.x;
-			        drawView.current_TouchY = point.y;
-			        
-			        drawView.points.add(point);
-//			        
-//			    	paint.setStyle(Paint.Style.STROKE);
-//			        path.lineTo(current_TouchX, current_TouchY);
-//					path.moveTo(current_TouchX, current_TouchY);
-//			        canvas.drawPath(path, paint);
-			        
-					drawView.postInvalidate();
-					
-					try {
-						Thread.sleep(50);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					// End
-					
-					encoderCount = 0;
-					nanoCount = 0;
-					nanoQueue.clear();
-					encoderQueue.clear();
-					// One Output Here
-					// SendMsgUart(beSendMsg.toString(),1);
-				}
-
+				// Log.i(TAG,"encoderOpend = " + encoderOpend + "  nanoOpend = "
+				// + nanoOpend );
+				//Log.i(TAG, "nanoQueue.size() = " + nanoQueue.size()
+				//		+ " encoderQueue.size() = " + encoderQueue.size());
 				
+				if ( ( nanoOpend== true || debugNanoQueue == true) 
+						&& ( encoderOpend == true || debugEncoderQueue == true ) ) {
+					// byte[] beSendMsg = new byte[beSentMessage];;
+	
+					Log.i(TAG, "nanoQueue.size() = " + nanoQueue.size()
+							+ " encoderQueue.size() = " + encoderQueue.size());
+	
+					if (nanoQueue.size() >= getNanoDataSize + 4
+							&& encoderQueue.size() >= getEncoderDataSize) {
+	
+						// Arrays.fill(beSendMsg, (byte)0x00);
+	
+						minusNumber = nanoQueue.size() - getNanoDataSize;
+						// Two input here.
+	
+						if (nanoQueue.size() % 3 != 0) {
+	
+							minusNumber = nanoQueue.size() - getNanoDataSize
+									- (nanoQueue.size() % 3);
+						}
+	
+						// Two input here.
+						ArrayList<float[]> nanoData = getNanoRange(nanoQueue,
+								minusNumber, nanoQueue.size()
+										- (nanoQueue.size() % 3));
+						ArrayList<byte[]> encoderData = getEncoderRange(encoderQueue,
+								encoderQueue.size() - getEncoderDataSize,
+								encoderQueue.size());
+	
+	
+						
+						
+						
+						// Calculate nanopan data and encoder data here (java
+						// layer).
+						// Encoder data format
+						// [L Polarity] [L2] [L1] [R polarity] [R2] [R1] [COM2] [COM1] [0x45]
+						// Save to byte array beSendMsg[11]
+						// ....................
+						for (int i = 0; i < nanoData.size(); i++) {
+							nanoFloat = nanoData.get(i);
+							nanoFloat_1[i]=nanoFloat[1];
+							Log.i(TAG, "combine nanoFloat [" + i + " ] = "
+									+ nanoFloat_1[i]);
+							
+						}
+	
+						ArrayList<int[]> encoderDataQueue = new ArrayList<int[]>();
+						byte[] encoByte = encoderData.get(0);
+						int[] tempInt = new int[3]; // L Wheel , R Wheel , Compass
+						for (int i=0;i<encoderData.size();i++)
+						{
+							tempInt[0]  = ( (encoByte[1] << 8) & 0xff00 | (encoByte[2] & 0xff));
+							if (encoByte[0] == 2)
+								tempInt[0] = -tempInt[0];
+							
+							tempInt[1]  = ( (encoByte[4] << 8) & 0xff00 | (encoByte[5] & 0xff));
+							if (encoByte[3] == 2)
+								tempInt[1] = -tempInt[1];
+							
+							tempInt[2]  = ( (encoByte[6] << 8) & 0xff00 | (encoByte[7] & 0xff));
+							
+							
+							Log.i(TAG,"encoder data L=" + tempInt[0] + " R=" + tempInt[1] + " com = " + tempInt[2]);
+							
+							encoderDataQueue.add(tempInt);
+						}
+						
+			///監看nanopan輸入值
+						Log.i(TAG,"Nano1=" + nanoFloat_1[0] + " Nano2=" + nanoFloat_1[1] + " Nano3= " + nanoFloat_1[2]);
+			///------EKF-----------------------------------------------------------------------------------------
+						float robotLocation[] = EKF((float)nanoFloat_1[0],(float)nanoFloat_1[1],(float)nanoFloat_1[2],(int) tempInt[0],(int) tempInt[1],(int) tempInt[2]);
+			///--------------------------------------------------------------------------------------------------
+						Point point = new Point();
+						Point pointOriginal = new Point();
+						// Calibration to center
+						xCoordinateOri.setText(" X ori : " + Float.toString(robotLocation[0]));
+						yCoordinateOri.setText(" Y ori : " + Float.toString(robotLocation[1]));
+						
+						pointOriginal.x = robotLocation[0];
+						pointOriginal.y = robotLocation[1];
+						
+						AxisPointData.add(pointOriginal);
+						
+						point.x = (float) (robotLocation[0]*5 + 150);
+						point.y = (float) (robotLocation[1]*5 + 150);
+						
+						xCoordinate.setText(" X : " + Float.toString(point.x));
+						yCoordinate.setText(" Y : " + Float.toString(point.y));
+						
+						//add for test
+						//point.x = 200;
+						//point.y = 300;				
+						
+				        if (count == 0){
+				        	drawView.firsttouchX = point.x;
+				        	drawView.firsttouchY = point.y;
+	//			        	path.moveTo(firsttouchX, firsttouchY);
+							count++;
+				        }
+				     
+				        drawView.current_TouchX = point.x;
+				        drawView.current_TouchY = point.y;
+				        
+				        
+				        drawView.points.add(point);
+	//			        
+	//			    	paint.setStyle(Paint.Style.STROKE);
+	//			        path.lineTo(current_TouchX, current_TouchY);
+	//					path.moveTo(current_TouchX, current_TouchY);
+	//			        canvas.drawPath(path, paint);
+				        
+						drawView.postInvalidate();
+						
+						try {
+							Thread.sleep(50);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+						// End
+						
+						encoderCount = 0;
+						nanoCount = 0;
+						nanoQueue.clear();
+						encoderQueue.clear();
+						// One Output Here
+						// SendMsgUart(beSendMsg.toString(),1);
+					}
+	
+					
+				}
+				handler.postDelayed(rCombine, combineInterval);
 			}
-			handler.postDelayed(rCombine, combineInterval);
 		}
 	}
 	
@@ -1091,7 +1250,6 @@ public class MainActivity extends Activity {
 		
 	}
 
-	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -1143,6 +1301,6 @@ public class MainActivity extends Activity {
 	public static native byte[] ReceiveByteMsgUart(int fdNum);
 	public static native int StartCal();
 	public static native byte[] Combine(ArrayList<float[]> nanoq , ArrayList<int[]> encoq);
-	public static native float[] floatTest();
+	public static native int WeightSet(float dwWeight , float encoderWeight);
 	public static native float[] EKF(float a,float b,float c,int left,int right,int degree);
 }

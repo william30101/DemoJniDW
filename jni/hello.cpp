@@ -56,10 +56,14 @@ static float Kk[8][3],Pk_HkT[8][3],HkPk_HkT[3][3],HkPk_HkTR[3][3],InvHkPk_HkTR[3
 static float KkdZ[8][1],Xk[8][1];
 static float KkHk[8][8],KkHkPk_[8][8],Pk[8][8];
 
-static float Xk_[8][1]={{0},{0},{6},{0},{1.8},{2.7},{0.4},{22.5}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
+static float Xk_[8][1]={{0},{0},{-6.3},{-0.9},{-23.4},{1.35},{3.6},{1.35}};//modify the coordinate here(robot,anchor1,anchor2,anchor3)
 static float Pk_[8][8]={{1,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0},{0,0,1,0,0,0,0,0},{0,0,0,1,0,0,0,0},{0,0,0,0,1,0,0,0},{0,0,0,0,0,1,0,0},{0,0,0,0,0,0,1,0},{0,0,0,0,0,0,0,1}};
-static float Q[8][8]={{500,0,0,0,0,0,0,0},{0,500,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
-static float R[3][3]={{0.1,0,0},{0,0.1,0},{0,0,0.1}};//modify the rate of measurement
+
+//DW1000
+static float Q[8][8]={{0.1,0,0,0,0,0,0,0},{0,0.1,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,0}};//modify the rate of state equation
+
+//Encoder
+static float R[3][3]={{1000,0,0},{0,1000,0},{0,0,1000}};//modify the rate of measurement
 
 static float X,Y,dX,dY;
 static float cosine,sine,VL,VR,V,W;
@@ -320,6 +324,7 @@ extern "C"
 			//LOGI("Write data 3 = %x",buf[3]);
 			//LOGI("Write data 4 = %x",buf[4]);
 			//LOGI("Write data 5 = %x",buf[5]);
+			//LOGI("Write data 6 = %x",buf[6]);
 
 			env->ReleaseByteArrayElements(inByte, a, 0);
 		}
@@ -465,15 +470,24 @@ extern "C"
 
 
 
-	JNIEXPORT jfloatArray JNICALL Native_floatTest(JNIEnv *env,jobject mc)
+	JNIEXPORT jint JNICALL Native_WeightSet(JNIEnv *env,jobject mc, jfloat dwWeight , jfloat encoderWeight)
 	{
-		jfloatArray result;
-		float RobotLocation[] = { 1.0 , 2.0};
-		result = env->NewFloatArray(2); // Store X , Y data
+		//jfloatArray result;
+		//float RobotLocation[] = { 1.0 , 2.0};
+		//result = env->NewFloatArray(2); // Store X , Y data
 
-		env->SetFloatArrayRegion(result, 0, 2, RobotLocation);
+		LOGI("DW weight = %x encoder weight = %x",dwWeight,encoderWeight);
 
-		return result;
+		Q[0][0] = dwWeight;
+		Q[1][1] = dwWeight;
+
+		R[0][0] = encoderWeight;
+		R[1][1] = encoderWeight;
+		R[2][2] = encoderWeight;
+
+		//env->SetFloatArrayRegion(result, 0, 2, RobotLocation);
+
+		return 0;
 	}
 
 	///------EKF calculation--------------------------------------------------------------------------
@@ -705,7 +719,7 @@ extern "C"
 		{"CloseUart",   "(I)I",   	(void *)Native_CloseUart},
 		{"Combine",   "(Ljava/util/ArrayList;Ljava/util/ArrayList;)[B",   	(void *)Native_Combine},
 		{"EKF", "(FFFIII)[F"	,(void *)Native_EKF},
-		{"floatTest", "()[F"	,(void *)Native_floatTest},
+		{"WeightSet", "(FF)I"	,(void *)Native_WeightSet},
 
 
 
